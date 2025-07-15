@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 function LoginPage() {
     const navigate = useNavigate()
+    const location = useLocation()
     const { login, isAuthenticated } = useAuth()
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -16,11 +18,13 @@ function LoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
 
+    const from = location.state?.from?.pathname || '/'
+
     useEffect(() => {
         if (isAuthenticated) {
-            navigate('/')
+            navigate(from, { replace: true })
         }
-    }, [isAuthenticated, navigate])
+    }, [isAuthenticated, navigate, from])
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target
@@ -81,7 +85,7 @@ function LoginPage() {
             })
 
             setTimeout(() => {
-                navigate('/')
+                navigate(from, { replace: true })
             }, 1000)
 
         } catch (error) {
@@ -141,6 +145,14 @@ function LoginPage() {
                     <p className="text-gray-600">
                         Sign in to your account to continue buying and selling
                     </p>
+
+                    {location.state?.from && (
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                                Please sign in to access your account
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Login Form */}

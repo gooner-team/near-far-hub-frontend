@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import Layout from './components/common/Layout'
+import ProtectedRoute from './components/common/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProductPage from './pages/ProductPage'
@@ -18,7 +19,14 @@ function App() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/category/:category" element={<CategoryPage />} />
                         <Route path="/product/:id" element={<ProductPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedRoute>
+                                    <ProfilePage />
+                                </ProtectedRoute>
+                            }
+                        />
                         <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </Layout>
