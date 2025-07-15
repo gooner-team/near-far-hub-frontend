@@ -307,33 +307,6 @@ function ProfilePage() {
                                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h3>
                                     <div className="space-y-4">
-                                        {sellerProfile ? [
-                                            {
-                                                action: 'Listed new item',
-                                                item: 'MacBook Pro 16"',
-                                                time: '2 hours ago',
-                                                type: 'listing'
-                                            },
-                                            {
-                                                action: 'Received message about',
-                                                item: 'Vintage Camera',
-                                                time: '1 day ago',
-                                                type: 'message'
-                                            },
-                                            {
-                                                action: 'Sold item',
-                                                item: 'Gaming Chair',
-                                                time: '3 days ago',
-                                                type: 'sale'
-                                            }
-                                        ] : [
-                                            {
-                                                action: 'Account created',
-                                                item: 'Welcome to NearFar Hub!',
-                                                time: 'Today',
-                                                type: 'account'
-                                            }
-                                        ]}
                                         {(sellerProfile ? [
                                             {
                                                 action: 'Listed new item',
