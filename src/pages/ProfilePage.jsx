@@ -26,7 +26,7 @@ import {
 import {useAuth} from '../contexts/AuthContext'
 
 function ProfilePage() {
-    const {user, logout, isAuthenticated, isLoading} = useAuth()
+    const {user, logout, isAuthenticated, isLoading, apiCall} = useAuth()
     const navigate = useNavigate()
 
     const [activeTab, setActiveTab] = useState('overview')
@@ -41,6 +41,8 @@ function ProfilePage() {
     })
     const [isSaving, setIsSaving] = useState(false)
     const [message, setMessage] = useState({type: '', text: ''})
+    const [sellerProfile, setSellerProfile] = useState(null)
+    const [loadingSellerProfile, setLoadingSellerProfile] = useState(false)
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -62,6 +64,29 @@ function ProfilePage() {
             })
         }
     }, [user])
+
+    // Load seller profile
+    useEffect(() => {
+        const loadSellerProfile = async () => {
+            if (!user || !apiCall) return
+
+            setLoadingSellerProfile(true)
+            try {
+                const response = await apiCall('http://localhost:8000/api/seller/profile')
+                if (response.ok) {
+                    const data = await response.json()
+                    setSellerProfile(data.data)
+                }
+            } catch (error) {
+                // User doesn't have a seller profile yet
+                setSellerProfile(null)
+            } finally {
+                setLoadingSellerProfile(false)
+            }
+        }
+
+        loadSellerProfile()
+    }, [user, apiCall])
 
     const handleInputChange = (e) => {
         const {name, value} = e.target
@@ -117,6 +142,10 @@ function ProfilePage() {
         }
     }
 
+    const handleSetupSeller = () => {
+        navigate('/seller/setup')
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -137,10 +166,10 @@ function ProfilePage() {
     ]
 
     const stats = [
-        {label: 'Active Listings', value: '12', icon: Package, color: 'text-blue-600 bg-blue-100'},
+        {label: 'Active Listings', value: sellerProfile ? '12' : '0', icon: Package, color: 'text-blue-600 bg-blue-100'},
         {label: 'Favorites', value: '8', icon: Heart, color: 'text-red-600 bg-red-100'},
-        {label: 'Total Sales', value: '24', icon: ShoppingBag, color: 'text-green-600 bg-green-100'},
-        {label: 'Rating', value: '4.8', icon: Star, color: 'text-yellow-600 bg-yellow-100'}
+        {label: 'Total Sales', value: sellerProfile ? '24' : '0', icon: ShoppingBag, color: 'text-green-600 bg-green-100'},
+        {label: 'Rating', value: sellerProfile ? '4.8' : 'N/A', icon: Star, color: 'text-yellow-600 bg-yellow-100'}
     ]
 
     return (
@@ -206,6 +235,12 @@ function ProfilePage() {
                                     <CheckCircle className="w-4 h-4 mr-1"/>
                                     Verified Account
                                 </div>
+                                {sellerProfile && (
+                                    <div className="flex items-center justify-center mt-1 text-sm text-blue-600">
+                                        <Store className="w-4 h-4 mr-1"/>
+                                        Seller Account
+                                    </div>
+                                )}
                             </div>
 
                             {/* Navigation */}
@@ -272,7 +307,7 @@ function ProfilePage() {
                                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h3>
                                     <div className="space-y-4">
-                                        {[
+                                        {sellerProfile ? [
                                             {
                                                 action: 'Listed new item',
                                                 item: 'MacBook Pro 16"',
@@ -291,17 +326,53 @@ function ProfilePage() {
                                                 time: '3 days ago',
                                                 type: 'sale'
                                             }
-                                        ].map((activity, index) => (
+                                        ] : [
+                                            {
+                                                action: 'Account created',
+                                                item: 'Welcome to NearFar Hub!',
+                                                time: 'Today',
+                                                type: 'account'
+                                            }
+                                        ]}
+                                        {(sellerProfile ? [
+                                            {
+                                                action: 'Listed new item',
+                                                item: 'MacBook Pro 16"',
+                                                time: '2 hours ago',
+                                                type: 'listing'
+                                            },
+                                            {
+                                                action: 'Received message about',
+                                                item: 'Vintage Camera',
+                                                time: '1 day ago',
+                                                type: 'message'
+                                            },
+                                            {
+                                                action: 'Sold item',
+                                                item: 'Gaming Chair',
+                                                time: '3 days ago',
+                                                type: 'sale'
+                                            }
+                                        ] : [
+                                            {
+                                                action: 'Account created',
+                                                item: 'Welcome to NearFar Hub!',
+                                                time: 'Today',
+                                                type: 'account'
+                                            }
+                                        ]).map((activity, index) => (
                                             <div key={index}
                                                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
                                                 <div className={`p-2 rounded-lg ${
                                                     activity.type === 'listing' ? 'bg-blue-100 text-blue-600' :
                                                         activity.type === 'message' ? 'bg-yellow-100 text-yellow-600' :
-                                                            'bg-green-100 text-green-600'
+                                                            activity.type === 'sale' ? 'bg-green-100 text-green-600' :
+                                                                'bg-purple-100 text-purple-600'
                                                 }`}>
                                                     {activity.type === 'listing' ? <Package className="w-4 h-4"/> :
                                                         activity.type === 'message' ? <Mail className="w-4 h-4"/> :
-                                                            <ShoppingBag className="w-4 h-4"/>}
+                                                            activity.type === 'sale' ? <ShoppingBag className="w-4 h-4"/> :
+                                                                <User className="w-4 h-4"/>}
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className="text-sm text-gray-900">
@@ -319,30 +390,62 @@ function ProfilePage() {
                                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <button
-                                            className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors group">
-                                            <div
-                                                className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors">
-                                                <Package className="w-5 h-5 text-white"/>
-                                            </div>
-                                            <span className="font-medium text-blue-900">Create Listing</span>
-                                        </button>
-                                        <button
-                                            className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors group">
-                                            <div
-                                                className="p-2 bg-green-600 rounded-lg group-hover:bg-green-700 transition-colors">
-                                                <Store className="w-5 h-5 text-white"/>
-                                            </div>
-                                            <span className="font-medium text-green-900">Setup Store</span>
-                                        </button>
-                                        <button
-                                            className="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors group">
-                                            <div
-                                                className="p-2 bg-purple-600 rounded-lg group-hover:bg-purple-700 transition-colors">
-                                                <Heart className="w-5 h-5 text-white"/>
-                                            </div>
-                                            <span className="font-medium text-purple-900">View Favorites</span>
-                                        </button>
+                                        {sellerProfile ? (
+                                            <>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors">
+                                                        <Package className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-blue-900">Create Listing</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-green-600 rounded-lg group-hover:bg-green-700 transition-colors">
+                                                        <Calendar className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-green-900">Appointments</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-purple-600 rounded-lg group-hover:bg-purple-700 transition-colors">
+                                                        <Heart className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-purple-900">View Favorites</span>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={handleSetupSeller}
+                                                    className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors">
+                                                        <Store className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-blue-900">Become a Seller</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-green-600 rounded-lg group-hover:bg-green-700 transition-colors">
+                                                        <ShoppingBag className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-green-900">Browse Products</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-purple-600 rounded-lg group-hover:bg-purple-700 transition-colors">
+                                                        <Heart className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-purple-900">View Favorites</span>
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -491,17 +594,68 @@ function ProfilePage() {
                                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Selling Dashboard</h3>
 
-                                    <div className="text-center py-12">
-                                        <Store className="w-16 h-16 text-gray-400 mx-auto mb-4"/>
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-2">Start Selling on
-                                            NearFar Hub</h4>
-                                        <p className="text-gray-600 mb-6">Set up your seller account to start listing
-                                            and selling items</p>
-                                        <button
-                                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg">
-                                            Setup Seller Account
-                                        </button>
-                                    </div>
+                                    {loadingSellerProfile ? (
+                                        <div className="text-center py-12">
+                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                            <p className="text-gray-600">Loading seller profile...</p>
+                                        </div>
+                                    ) : sellerProfile ? (
+                                        <div className="space-y-6">
+                                            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                                                <div className="flex items-center space-x-3">
+                                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                                    <div>
+                                                        <p className="text-sm font-medium text-green-900">
+                                                            Seller Account Active
+                                                        </p>
+                                                        <p className="text-xs text-green-700">
+                                                            Your seller account is set up and ready to use
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors">
+                                                        <Package className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-blue-900">Create New Listing</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-green-600 rounded-lg group-hover:bg-green-700 transition-colors">
+                                                        <Calendar className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-green-900">Manage Appointments</span>
+                                                </button>
+                                                <button
+                                                    className="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors group">
+                                                    <div
+                                                        className="p-2 bg-purple-600 rounded-lg group-hover:bg-purple-700 transition-colors">
+                                                        <Settings className="w-5 h-5 text-white"/>
+                                                    </div>
+                                                    <span className="font-medium text-purple-900">Seller Settings</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <Store className="w-16 h-16 text-gray-400 mx-auto mb-4"/>
+                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">Start Selling on
+                                                NearFar Hub</h4>
+                                            <p className="text-gray-600 mb-6">Set up your seller account to start listing
+                                                and selling items</p>
+                                            <button
+                                                onClick={handleSetupSeller}
+                                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg">
+                                                Setup Seller Account
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

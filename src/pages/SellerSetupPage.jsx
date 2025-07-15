@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     Store,
     Clock,
@@ -9,17 +10,18 @@ import {
     AlertCircle,
     ArrowRight,
     Calendar,
-    CreditCard
+    CreditCard,
+    ArrowLeft
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 function SellerSetupPage() {
+    const navigate = useNavigate()
+    const { user, apiCall } = useAuth()
     const [currentStep, setCurrentStep] = useState(1)
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
     const [sellerProfile, setSellerProfile] = useState(null)
-
-    // Mock user auth - replace with your actual auth context
-    const mockUser = { id: 1, name: 'John Doe', email: 'john@example.com' }
 
     // Step 1: Business Information
     const [businessData, setBusinessData] = useState({
@@ -66,36 +68,25 @@ function SellerSetupPage() {
         sunday: 'Sunday'
     }
 
-    // Mock API call function - replace with your actual API calls
-    const apiCall = async (url, options = {}) => {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Mock successful responses
-        if (url.includes('/seller/profile') && options.method === 'POST') {
-            return {
-                ok: true,
-                json: async () => ({
-                    data: {
-                        id: 1,
-                        businessName: businessData.businessName,
-                        businessType: businessData.businessType,
-                        isActive: true,
-                        isVerified: false
+    // Check if user already has a seller profile
+    useEffect(() => {
+        const checkSellerProfile = async () => {
+            try {
+                const response = await apiCall('http://localhost:8000/api/seller/profile')
+                if (response.ok) {
+                    const data = await response.json()
+                    if (data.data) {
+                        // User already has a seller profile, redirect to dashboard
+                        navigate('/profile')
                     }
-                })
+                }
+            } catch (error) {
+                // User doesn't have a seller profile yet, continue with setup
             }
         }
 
-        if (url.includes('/seller/availability') && options.method === 'POST') {
-            return {
-                ok: true,
-                json: async () => ({ message: 'Availability set successfully' })
-            }
-        }
-
-        return { ok: true, json: async () => ({}) }
-    }
+        checkSellerProfile()
+    }, [apiCall, navigate])
 
     const handleBusinessDataChange = (field, value) => {
         setBusinessData(prev => ({ ...prev, [field]: value }))
@@ -133,7 +124,6 @@ function SellerSetupPage() {
         try {
             const response = await apiCall('http://localhost:8000/api/seller/profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     business_name: businessData.businessName,
                     business_description: businessData.businessDescription,
@@ -147,7 +137,8 @@ function SellerSetupPage() {
             })
 
             if (!response.ok) {
-                throw new Error('Failed to create seller profile')
+                const errorData = await response.json()
+                throw new Error(errorData.message || 'Failed to create seller profile')
             }
 
             const data = await response.json()
@@ -168,7 +159,6 @@ function SellerSetupPage() {
         try {
             const response = await apiCall('http://localhost:8000/api/seller/availability', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     availability: availability.map(day => ({
                         day_of_week: day.dayOfWeek,
@@ -180,7 +170,8 @@ function SellerSetupPage() {
             })
 
             if (!response.ok) {
-                throw new Error('Failed to set availability')
+                const errorData = await response.json()
+                throw new Error(errorData.message || 'Failed to set availability')
             }
 
             setCurrentStep(3)
@@ -210,9 +201,8 @@ function SellerSetupPage() {
 
     const handleComplete = () => {
         setMessage({ type: 'success', text: 'Seller setup complete! Redirecting to dashboard...' })
-        // In your actual app, navigate to dashboard
         setTimeout(() => {
-            console.log('Would navigate to seller dashboard')
+            navigate('/profile')
         }, 2000)
     }
 
@@ -228,6 +218,17 @@ function SellerSetupPage() {
                     <p className="text-gray-600">
                         Start selling on NearFar Hub and reach customers worldwide
                     </p>
+                </div>
+
+                {/* Back Button */}
+                <div className="mb-8">
+                    <button
+                        onClick={() => navigate('/profile')}
+                        className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Profile
+                    </button>
                 </div>
 
                 {/* Progress Steps */}
@@ -529,7 +530,7 @@ function SellerSetupPage() {
                 {currentStep < 3 && (
                     <div className="flex justify-between mt-8">
                         <button
-                            onClick={() => console.log('Cancel clicked')}
+                            onClick={() => navigate('/profile')}
                             className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors"
                         >
                             Cancel

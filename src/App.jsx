@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ProductPage from './pages/ProductPage'
 import ProfilePage from './pages/ProfilePage'
 import CategoryPage from './pages/CategoryPage'
+import SellerSetupPage from './pages/SellerSetupPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -24,6 +25,22 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <ProfilePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/sell"
+                            element={
+                                <ProtectedRoute>
+                                    <SellerSetupPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/seller/setup"
+                            element={
+                                <ProtectedRoute>
+                                    <SellerSetupPage />
                                 </ProtectedRoute>
                             }
                         />
