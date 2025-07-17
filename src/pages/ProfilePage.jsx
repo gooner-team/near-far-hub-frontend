@@ -24,6 +24,7 @@ import {
     AlertCircle
 } from 'lucide-react'
 import {useAuth} from '../contexts/AuthContext'
+import SellerListingsDashboard from "../components/seller/SellerListingsDashboard.jsx";
 
 function ProfilePage() {
     const {user, logout, isAuthenticated, isLoading, apiCall} = useAuth()
@@ -568,24 +569,27 @@ function ProfilePage() {
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Selling Dashboard</h3>
 
                                     {loadingSellerProfile ? (
-                                        <div className="text-center py-12">
-                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                            <p className="text-gray-600">Loading seller profile...</p>
+                                        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                                            <div className="text-center py-12">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                                <p className="text-gray-600">Loading seller profile...</p>
+                                            </div>
                                         </div>
                                     ) : sellerProfile ? (
-                                        <div className="space-y-6">
-                                            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                                                <div className="flex items-center space-x-3">
-                                                    <CheckCircle className="w-5 h-5 text-green-600" />
-                                                    <div>
-                                                        <p className="text-sm font-medium text-green-900">
-                                                            Seller Account Active
-                                                        </p>
-                                                        <p className="text-xs text-green-700">
-                                                            Your seller account is set up and ready to use
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                        <SellerListingsDashboard />
+                                    ) : (
+                                        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                                            <div className="text-center py-12">
+                                                <Store className="w-16 h-16 text-gray-400 mx-auto mb-4"/>
+                                                <h4 className="text-lg font-semibold text-gray-900 mb-2">Start Selling on
+                                                    NearFar Hub</h4>
+                                                <p className="text-gray-600 mb-6">Set up your seller account to start listing
+                                                    and selling items</p>
+                                                <button
+                                                    onClick={handleSetupSeller}
+                                                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg">
+                                                    Setup Seller Account
+                                                </button>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -615,7 +619,7 @@ function ProfilePage() {
                                                 </button>
                                             </div>
                                         </div>
-                                    ) : (
+                                    )} : (
                                         <div className="text-center py-12">
                                             <Store className="w-16 h-16 text-gray-400 mx-auto mb-4"/>
                                             <h4 className="text-lg font-semibold text-gray-900 mb-2">Start Selling on
@@ -628,7 +632,7 @@ function ProfilePage() {
                                                 Setup Seller Account
                                             </button>
                                         </div>
-                                    )}
+                                    )
                                 </div>
                             </div>
                         )}

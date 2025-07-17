@@ -4,10 +4,12 @@ import Layout from './components/common/Layout'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
-import ProductPage from './pages/ProductPage'
+import ListingDetailPage from './pages/ListingDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import CategoryPage from './pages/CategoryPage'
 import SellerSetupPage from './pages/SellerSetupPage'
+import CreateListingPage from './pages/CreateListingPage'
+import EditListingPage from './pages/EditListingPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -19,7 +21,7 @@ function App() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/category/:category" element={<CategoryPage />} />
-                        <Route path="/product/:id" element={<ProductPage />} />
+                        <Route path="/product/:id" element={<ListingDetailPage />} />
                         <Route
                             path="/profile"
                             element={
@@ -41,6 +43,22 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <SellerSetupPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/create-listing"
+                            element={
+                                <ProtectedRoute>
+                                    <CreateListingPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/edit-listing/:id"
+                            element={
+                                <ProtectedRoute>
+                                    <EditListingPage />
                                 </ProtectedRoute>
                             }
                         />
