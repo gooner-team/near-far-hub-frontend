@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import {
     Save,
     Eye,
-    Upload,
     X,
     MapPin,
     Euro,
@@ -11,10 +10,10 @@ import {
     Globe,
     Clock,
     AlertCircle,
-    CheckCircle,
-    Image as ImageIcon
+    CheckCircle
 } from 'lucide-react'
 import { listingsAPI, LISTING_CATEGORIES, LISTING_CONDITIONS } from '../../services/listingsAPI'
+import ImageUpload from '../common/ImageUpload'
 
 export default function ListingForm({ listingId = null, onSuccess }) {
     const navigate = useNavigate()
@@ -41,7 +40,6 @@ export default function ListingForm({ listingId = null, onSuccess }) {
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
-    const [imageUrls, setImageUrls] = useState([''])
 
     useEffect(() => {
         if (isEditing && listingId) {
@@ -67,8 +65,6 @@ export default function ListingForm({ listingId = null, onSuccess }) {
                 status: listing.status || 'draft',
                 expires_at: listing.expiresAt || ''
             })
-
-            setImageUrls(listing.images && listing.images.length > 0 ? listing.images : [''])
         } catch (error) {
             setMessage({ type: 'error', text: 'Failed to load listing data' })
         }
@@ -98,31 +94,27 @@ export default function ListingForm({ listingId = null, onSuccess }) {
         }))
     }
 
-    const handleImageUrlChange = (index, value) => {
-        const newUrls = [...imageUrls]
-        newUrls[index] = value
-        setImageUrls(newUrls)
+    const handleImagesChange = (newImages) => {
+        // Convert image objects to URL strings for the API
+        const imageUrls = newImages.map(img => {
+            if (typeof img === 'string') {
+                return img
+            }
+            return img.original_url || img.medium_url || img.thumbnail_url || img
+        })
 
-        const validUrls = newUrls.filter(url => url.trim() !== '')
         setFormData(prev => ({
             ...prev,
-            images: validUrls
+            images: imageUrls
         }))
-    }
 
-    const addImageUrl = () => {
-        setImageUrls([...imageUrls, ''])
-    }
-
-    const removeImageUrl = (index) => {
-        const newUrls = imageUrls.filter((_, i) => i !== index)
-        setImageUrls(newUrls)
-
-        const validUrls = newUrls.filter(url => url.trim() !== '')
-        setFormData(prev => ({
-            ...prev,
-            images: validUrls
-        }))
+        // Clear image errors if any
+        if (errors.images) {
+            setErrors(prev => ({
+                ...prev,
+                images: ''
+            }))
+        }
     }
 
     const validateForm = () => {
@@ -150,6 +142,10 @@ export default function ListingForm({ listingId = null, onSuccess }) {
 
         if (formData.description && formData.description.length > 5000) {
             newErrors.description = 'Description must not exceed 5000 characters'
+        }
+
+        if (formData.images.length === 0) {
+            newErrors.images = 'Please add at least one image'
         }
 
         setErrors(newErrors)
@@ -202,10 +198,12 @@ export default function ListingForm({ listingId = null, onSuccess }) {
 
     const handleSaveAsDraft = async () => {
         setFormData(prev => ({ ...prev, status: 'draft' }))
+        await handleSubmit(new Event('submit'))
     }
 
     const handlePublish = async () => {
         setFormData(prev => ({ ...prev, status: 'active' }))
+        await handleSubmit(new Event('submit'))
     }
 
     const requiresCondition = formData.category && formData.category !== 'services'
@@ -351,44 +349,27 @@ export default function ListingForm({ listingId = null, onSuccess }) {
                     </div>
                 </div>
 
-                {/* Images */}
+                {/* Images Upload */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Images
+                        Images *
                     </label>
-                    <div className="space-y-2">
-                        {imageUrls.map((url, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <ImageIcon className="w-4 h-4 text-gray-400" />
-                                <input
-                                    type="url"
-                                    value={url}
-                                    onChange={(e) => handleImageUrlChange(index, e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Enter image URL"
-                                />
-                                {imageUrls.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImageUrl(index)}
-                                        className="p-2 text-red-500 hover:text-red-700"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        {imageUrls.length < 10 && (
-                            <button
-                                type="button"
-                                onClick={addImageUrl}
-                                className="flex items-center space-x-2 px-3 py-2 text-blue-600 hover:text-blue-800"
-                            >
-                                <Upload className="w-4 h-4" />
-                                <span>Add another image</span>
-                            </button>
-                        )}
-                    </div>
+                    <ImageUpload
+                        onImagesChange={handleImagesChange}
+                        maxImages={10}
+                        folder="listings"
+                        existingImages={formData.images}
+                        className={errors.images ? 'border-red-300' : ''}
+                    />
+                    {errors.images && (
+                        <p className="mt-2 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {errors.images}
+                        </p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500">
+                        Upload up to 10 high-quality images of your item. The first image will be used as the main photo.
+                    </p>
                 </div>
 
                 {/* Location */}

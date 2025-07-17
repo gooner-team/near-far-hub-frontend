@@ -1,4 +1,4 @@
-import {useState, useRef} from 'react'
+import {useState, useRef, useEffect} from 'react'
 import {
     Upload,
     X,
@@ -7,7 +7,10 @@ import {
     CheckCircle,
     Loader2,
     Plus,
-    Link as LinkIcon
+    Link as LinkIcon,
+    Camera,
+    Move,
+    Eye
 } from 'lucide-react'
 import {useAuth} from '../../contexts/AuthContext'
 
@@ -16,16 +19,63 @@ export default function ImageUpload({
                                         maxImages = 10,
                                         folder = 'listings',
                                         existingImages = [],
-                                        className = ''
+                                        className = '',
+                                        required = false
                                     }) {
     const {apiCall} = useAuth()
     const fileInputRef = useRef(null)
-    const [images, setImages] = useState(existingImages)
+    const [images, setImages] = useState([])
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState({})
     const [errors, setErrors] = useState([])
     const [showUrlInput, setShowUrlInput] = useState(false)
     const [urlInput, setUrlInput] = useState('')
+    const [draggedIndex, setDraggedIndex] = useState(null)
+    const [previewImage, setPreviewImage] = useState(null)
+
+    // Initialize with existing images
+    useEffect(() => {
+        if (existingImages && existingImages.length > 0) {
+            const processedImages = existingImages.map((img, index) => {
+                if (typeof img === 'string') {
+                    return {
+                        id: `existing-${index}`,
+                        original_url: img,
+                        medium_url: img,
+                        thumbnail_url: img,
+                        filename: `image-${index + 1}`,
+                        isExisting: true
+                    }
+                }
+                return {
+                    id: img.id || `existing-${index}`,
+                    ...img,
+                    isExisting: true
+                }
+            })
+            setImages(processedImages)
+        }
+    }, [existingImages])
+
+    // Notify parent component when images change
+    useEffect(() => {
+        onImagesChange(images)
+    }, [images, onImagesChange])
+
+    const validateFile = (file) => {
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        const maxSize = 10 * 1024 * 1024 // 10MB
+
+        if (!validTypes.includes(file.type)) {
+            return 'Please upload only JPEG, PNG, GIF, or WebP images'
+        }
+
+        if (file.size > maxSize) {
+            return 'File size must be less than 10MB'
+        }
+
+        return null
+    }
 
     const handleFileSelect = async (event) => {
         const files = Array.from(event.target.files)
@@ -40,18 +90,36 @@ export default function ImageUpload({
         setUploading(true)
         setErrors([])
 
+        const validFiles = []
+        const fileErrors = []
+
+        // Validate all files first
+        files.forEach((file, index) => {
+            const error = validateFile(file)
+            if (error) {
+                fileErrors.push(`File ${index + 1}: ${error}`)
+            } else {
+                validFiles.push(file)
+            }
+        })
+
+        if (fileErrors.length > 0) {
+            setErrors(fileErrors)
+            setUploading(false)
+            return
+        }
+
         try {
             const formData = new FormData()
-            files.forEach(file => {
+            validFiles.forEach(file => {
                 formData.append('images[]', file)
             })
             formData.append('folder', folder)
 
-            const response = await apiCall('/api/upload/images', {
+            const response = await apiCall('http://localhost:8000/api/upload/images', {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    // Don't set Content-Type for FormData, let browser set it
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
@@ -65,9 +133,12 @@ export default function ImageUpload({
             const data = await response.json()
 
             if (data.success) {
-                const newImages = [...images, ...data.data]
-                setImages(newImages)
-                onImagesChange(newImages)
+                const newImages = data.data.map(img => ({
+                    id: `uploaded-${Date.now()}-${Math.random()}`,
+                    ...img,
+                    isExisting: false
+                }))
+                setImages(prev => [...prev, ...newImages])
             } else {
                 throw new Error(data.message || 'Upload failed')
             }
@@ -90,7 +161,7 @@ export default function ImageUpload({
         setErrors([])
 
         try {
-            const response = await apiCall('/api/upload/from-url', {
+            const response = await apiCall('http://localhost:8000/api/upload/from-url', {
                 method: 'POST',
                 body: JSON.stringify({
                     url: urlInput.trim(),
@@ -106,9 +177,12 @@ export default function ImageUpload({
             const data = await response.json()
 
             if (data.success) {
-                const newImages = [...images, data.data]
-                setImages(newImages)
-                onImagesChange(newImages)
+                const newImage = {
+                    id: `url-uploaded-${Date.now()}`,
+                    ...data.data,
+                    isExisting: false
+                }
+                setImages(prev => [...prev, newImage])
                 setUrlInput('')
                 setShowUrlInput(false)
             } else {
@@ -126,9 +200,9 @@ export default function ImageUpload({
         const imageToRemove = images[index]
 
         try {
-            // Try to delete from server if it has a path
-            if (imageToRemove.original_url) {
-                await apiCall('/api/upload/image', {
+            // Try to delete from server if it's not an existing image
+            if (!imageToRemove.isExisting && imageToRemove.original_url) {
+                await apiCall('http://localhost:8000/api/upload/image', {
                     method: 'DELETE',
                     body: JSON.stringify({
                         path: imageToRemove.original_url
@@ -141,25 +215,53 @@ export default function ImageUpload({
 
         const newImages = images.filter((_, i) => i !== index)
         setImages(newImages)
-        onImagesChange(newImages)
+    }
+
+    const reorderImages = (fromIndex, toIndex) => {
+        const newImages = [...images]
+        const [movedImage] = newImages.splice(fromIndex, 1)
+        newImages.splice(toIndex, 0, movedImage)
+        setImages(newImages)
+    }
+
+    const handleDragStart = (e, index) => {
+        setDraggedIndex(index)
+        e.dataTransfer.effectAllowed = 'move'
     }
 
     const handleDragOver = (e) => {
         e.preventDefault()
-        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'move'
     }
 
-    const handleDragEnter = (e) => {
+    const handleDrop = (e, dropIndex) => {
+        e.preventDefault()
+        if (draggedIndex !== null && draggedIndex !== dropIndex) {
+            reorderImages(draggedIndex, dropIndex)
+        }
+        setDraggedIndex(null)
+    }
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null)
+    }
+
+    const handleFileDragOver = (e) => {
         e.preventDefault()
         e.stopPropagation()
     }
 
-    const handleDragLeave = (e) => {
+    const handleFileDragEnter = (e) => {
         e.preventDefault()
         e.stopPropagation()
     }
 
-    const handleDrop = (e) => {
+    const handleFileDragLeave = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    const handleFileDrop = (e) => {
         e.preventDefault()
         e.stopPropagation()
 
@@ -195,27 +297,67 @@ export default function ImageUpload({
 
             {/* Image Grid */}
             {images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {images.map((image, index) => (
-                        <div key={index} className="relative group">
-                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                                <img
-                                    src={image.medium_url || image.thumbnail_url || image.original_url || image}
-                                    alt={`Upload ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04NSA3NUgxMTVWMTA1SDg1Vjc1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNzUgMTI1SDE0NVYxNTVINzVWMTI1WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-                                    }}
-                                />
-                            </div>
-                            <button
-                                onClick={() => removeImage(index)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {images.map((image, index) => (
+                            <div
+                                key={image.id || index}
+                                className={`relative group cursor-move ${draggedIndex === index ? 'opacity-50' : ''}`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
+                                onDragEnd={handleDragEnd}
                             >
-                                <X className="w-3 h-3"/>
-                            </button>
-                        </div>
-                    ))}
+                                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-300 transition-colors">
+                                    <img
+                                        src={image.medium_url || image.thumbnail_url || image.original_url || image}
+                                        alt={`Upload ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04NSA3NUgxMTVWMTA1SDg1Vjc1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNzUgMTI1SDE0NVYxNTVINzVWMTI1WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Image Controls */}
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                    <div className="opacity-0 group-hover:opacity-100 flex space-x-2">
+                                        <button
+                                            onClick={() => setPreviewImage(image)}
+                                            className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                                            title="Preview"
+                                        >
+                                            <Eye className="w-4 h-4 text-gray-700" />
+                                        </button>
+                                        <button
+                                            onClick={() => removeImage(index)}
+                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                                            title="Remove"
+                                        >
+                                            <X className="w-4 h-4 text-white" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Main Image Indicator */}
+                                {index === 0 && (
+                                    <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                        Main
+                                    </div>
+                                )}
+
+                                {/* Drag Indicator */}
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white rounded p-1">
+                                    <Move className="w-3 h-3 text-gray-600" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <p className="text-sm text-gray-600">
+                        <strong>Tip:</strong> Drag images to reorder them. The first image will be used as the main photo.
+                    </p>
                 </div>
             )}
 
@@ -225,10 +367,10 @@ export default function ImageUpload({
                     {/* File Upload */}
                     <div
                         className="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-lg p-8 text-center transition-colors cursor-pointer"
-                        onDragOver={handleDragOver}
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
+                        onDragOver={handleFileDragOver}
+                        onDragEnter={handleFileDragEnter}
+                        onDragLeave={handleFileDragLeave}
+                        onDrop={handleFileDrop}
                         onClick={() => fileInputRef.current?.click()}
                     >
                         <input
@@ -310,6 +452,34 @@ export default function ImageUpload({
                     className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
                     <AlertCircle className="w-4 h-4"/>
                     <span className="text-sm">Maximum number of images reached ({maxImages})</span>
+                </div>
+            )}
+
+            {/* Required Field Notice */}
+            {required && images.length === 0 && (
+                <div
+                    className="flex items-center space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
+                    <Camera className="w-4 h-4"/>
+                    <span className="text-sm">At least one image is required for your listing</span>
+                </div>
+            )}
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="relative max-w-4xl max-h-full">
+                        <button
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+                        >
+                            <X className="w-8 h-8" />
+                        </button>
+                        <img
+                            src={previewImage.original_url || previewImage.medium_url || previewImage}
+                            alt="Preview"
+                            className="max-w-full max-h-full object-contain"
+                        />
+                    </div>
                 </div>
             )}
         </div>
