@@ -1,203 +1,57 @@
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_URL = 'http://localhost:8000/api'
 
-const handleResponse = async (response) => {
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        error.status = response.status
-        error.data = errorData
-        throw error
-    }
-    return response.json()
-}
+const createAPI = (baseURL = API_URL) => {
+    const request = async (endpoint, options = {}) => {
+        const token = localStorage.getItem('auth_token')
+        const url = `${baseURL}${endpoint}`
 
-const getAuthToken = () => {
-    return localStorage.getItem('auth_token')
-}
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(token && { Authorization: `Bearer ${token}` }),
+                ...options.headers
+            },
+            ...options
+        }
 
-const apiRequest = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`
-    const token = getAuthToken()
-
-    const defaultHeaders = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-    }
-
-    if (token) {
-        defaultHeaders['Authorization'] = `Bearer ${token}`
-    }
-
-    const config = {
-        headers: {
-            ...defaultHeaders,
-            ...options.headers,
-        },
-        ...options,
-    }
-
-    try {
         const response = await fetch(url, config)
-        return await handleResponse(response)
-    } catch (error) {
-        console.error(`API Error (${endpoint}):`, error)
-        throw error
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}))
+            throw new Error(error.message || `HTTP ${response.status}`)
+        }
+
+        return response.json()
+    }
+
+    return {
+        get: (endpoint, params) => {
+            const query = params ? `?${new URLSearchParams(params)}` : ''
+            return request(`${endpoint}${query}`)
+        },
+        post: (endpoint, data) => request(endpoint, { method: 'POST', body: JSON.stringify(data) }),
+        put: (endpoint, data) => request(endpoint, { method: 'PUT', body: JSON.stringify(data) }),
+        delete: (endpoint) => request(endpoint, { method: 'DELETE' })
     }
 }
 
+export const api = createAPI()
+
+// API endpoints
 export const authAPI = {
-    login: async (credentials) => {
-        return apiRequest('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify(credentials),
-        })
-    },
-
-    register: async (userData) => {
-        return apiRequest('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(userData),
-        })
-    },
-
-    logout: async () => {
-        return apiRequest('/auth/logout', {
-            method: 'POST',
-        })
-    },
-
-    getUser: async () => {
-        return apiRequest('/auth/user')
-    },
-
-    forgotPassword: async (email) => {
-        return apiRequest('/auth/forgot-password', {
-            method: 'POST',
-            body: JSON.stringify({ email }),
-        })
-    },
-
-    resetPassword: async (resetData) => {
-        return apiRequest('/auth/reset-password', {
-            method: 'POST',
-            body: JSON.stringify(resetData),
-        })
-    },
+    login: (data) => api.post('/auth/login', data),
+    logout: () => api.post('/auth/logout'),
+    getUser: () => api.get('/auth/user')
 }
 
-export const productAPI = {
-    getProducts: async (params = {}) => {
-        const queryString = new URLSearchParams(params).toString()
-        return apiRequest(`/products${queryString ? `?${queryString}` : ''}`)
-    },
-
-    getProduct: async (id) => {
-        return apiRequest(`/products/${id}`)
-    },
-
-    createProduct: async (productData) => {
-        return apiRequest('/products', {
-            method: 'POST',
-            body: JSON.stringify(productData),
-        })
-    },
-
-    updateProduct: async (id, productData) => {
-        return apiRequest(`/products/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(productData),
-        })
-    },
-
-    deleteProduct: async (id) => {
-        return apiRequest(`/products/${id}`, {
-            method: 'DELETE',
-        })
-    },
+export const listingsAPI = {
+    getAll: (filters) => api.get('/listings', filters),
+    getById: (id) => api.get(`/listings/${id}`),
+    create: (data) => api.post('/listings', data),
+    update: (id, data) => api.put(`/listings/${id}`, data),
+    delete: (id) => api.delete(`/listings/${id}`),
+    getMy: (filters) => api.get('/listings/my/listings', filters),
+    getFeatured: (filters) => api.get('/listings/featured', filters),
+    search: (query, filters) => api.get('/listings/search', { q: query, ...filters })
 }
-
-export const categoryAPI = {
-    getCategories: async () => {
-        return apiRequest('/categories')
-    },
-
-    getCategoryProducts: async (categoryId, params = {}) => {
-        const queryString = new URLSearchParams(params).toString()
-        return apiRequest(`/categories/${categoryId}/products${queryString ? `?${queryString}` : ''}`)
-    },
-}
-
-export const userAPI = {
-    getProfile: async () => {
-        return apiRequest('/user/profile')
-    },
-
-    updateProfile: async (profileData) => {
-        return apiRequest('/user/profile', {
-            method: 'PUT',
-            body: JSON.stringify(profileData),
-        })
-    },
-
-    getUserListings: async () => {
-        return apiRequest('/user/listings')
-    },
-
-    getUserFavorites: async () => {
-        return apiRequest('/user/favorites')
-    },
-}
-
-export const uploadAPI = {
-    uploadFile: async (file, type = 'image') => {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', type)
-
-        return apiRequest('/upload', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${getAuthToken()}`,
-            },
-            body: formData,
-        })
-    },
-
-    uploadFiles: async (files, type = 'image') => {
-        const formData = new FormData()
-        files.forEach((file, index) => {
-            formData.append(`files[${index}]`, file)
-        })
-        formData.append('type', type)
-
-        return apiRequest('/upload/multiple', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${getAuthToken()}`,
-            },
-            body: formData,
-        })
-    },
-}
-
-export const healthAPI = {
-    check: async () => {
-        return apiRequest('/health')
-    },
-}
-
-export { apiRequest }
-
-const api = {
-    auth: authAPI,
-    products: productAPI,
-    categories: categoryAPI,
-    user: userAPI,
-    upload: uploadAPI,
-    health: healthAPI,
-    request: apiRequest,
-}
-
-export default api
