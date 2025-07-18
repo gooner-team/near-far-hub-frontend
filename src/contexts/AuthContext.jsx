@@ -1,4 +1,5 @@
-import {createContext, useContext, useState, useEffect} from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { API_BASE_URL } from '../config/api'
 
 const AuthContext = createContext()
 
@@ -10,7 +11,7 @@ export const useAuth = () => {
     return context
 }
 
-export const AuthProvider = ({children}) => {
+export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [token, setToken] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -39,7 +40,7 @@ export const AuthProvider = ({children}) => {
     }, [])
 
     const login = async (credentials) => {
-        const response = await fetch('http://localhost:8000/api/auth/login', {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export const AuthProvider = ({children}) => {
     const logout = async () => {
         try {
             if (token) {
-                await fetch('http://localhost:8000/api/auth/logout', {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -92,7 +93,7 @@ export const AuthProvider = ({children}) => {
         if (!token) return null
 
         try {
-            const response = await fetch('http://localhost:8000/api/auth/user', {
+            const response = await fetch(`${API_BASE_URL}/auth/user`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
@@ -116,6 +117,8 @@ export const AuthProvider = ({children}) => {
     const isAuthenticated = Boolean(user && token)
 
     const apiCall = async (url, options = {}) => {
+        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
+
         const headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -126,7 +129,7 @@ export const AuthProvider = ({children}) => {
             headers['Authorization'] = `Bearer ${token}`
         }
 
-        return fetch(url, {
+        return fetch(fullUrl, {
             ...options,
             headers,
         })

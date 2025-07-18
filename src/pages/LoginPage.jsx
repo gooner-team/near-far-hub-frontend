@@ -2,23 +2,35 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useValidation, commonRules, validators } from '../utils/validation'
 
 function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isAuthenticated } = useAuth()
-
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        remember: false
-    })
-    const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
 
     const from = location.state?.from?.pathname || '/'
+
+    const validationRules = {
+        email: commonRules.email,
+        password: [validators.required, (value) => validators.minLength(value, 6)]
+    }
+
+    const {
+        data: formData,
+        errors,
+        touched,
+        handleChange,
+        handleBlur,
+        validateAll,
+        reset
+    } = useValidation(
+        { email: '', password: '', remember: false },
+        validationRules
+    )
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -28,52 +40,28 @@ function LoginPage() {
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }))
+        const inputValue = type === 'checkbox' ? checked : value
 
-        if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }))
-        }
+        handleChange(name, inputValue)
 
         if (message.text) {
             setMessage({ type: '', text: '' })
         }
     }
 
-    const validateForm = () => {
-        const newErrors = {}
-
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required'
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address'
-        }
-
-        if (!formData.password) {
-            newErrors.password = 'Password is required'
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters long'
-        }
-
-        return newErrors
+    const handleInputBlur = (e) => {
+        const { name } = e.target
+        handleBlur(name)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        const validationErrors = validateForm()
-        if (Object.keys(validationErrors).length > 0) {
-            setErrors(validationErrors)
+        if (!validateAll()) {
             return
         }
 
         setIsLoading(true)
-        setErrors({})
         setMessage({ type: '', text: '' })
 
         try {
@@ -90,9 +78,9 @@ function LoginPage() {
 
         } catch (error) {
             if (error.message.includes('credentials') || error.message.includes('Invalid')) {
-                setErrors({
-                    email: 'Invalid email or password',
-                    password: 'Invalid email or password'
+                setMessage({
+                    type: 'error',
+                    text: 'Invalid email or password'
                 })
             } else if (error.status === 422) {
                 setMessage({
@@ -116,12 +104,9 @@ function LoginPage() {
     }
 
     const handleDemoLogin = () => {
-        setFormData({
-            email: 'test@example.com',
-            password: 'password',
-            remember: false
-        })
-        setErrors({})
+        handleChange('email', 'test@example.com')
+        handleChange('password', 'password')
+        handleChange('remember', false)
         setMessage({ type: '', text: '' })
     }
 
@@ -135,8 +120,8 @@ function LoginPage() {
                             <span className="text-white font-bold text-xl">NF</span>
                         </div>
                         <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              NearFar Hub
-            </span>
+                            NearFar Hub
+                        </span>
                     </Link>
 
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -188,13 +173,14 @@ function LoginPage() {
                                     autoComplete="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
+                                    onBlur={handleInputBlur}
                                     className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                        touched.email && errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your email"
                                 />
                             </div>
-                            {errors.email && (
+                            {touched.email && errors.email && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" />
                                     {errors.email}
@@ -216,8 +202,9 @@ function LoginPage() {
                                     autoComplete="current-password"
                                     value={formData.password}
                                     onChange={handleInputChange}
+                                    onBlur={handleInputBlur}
                                     className={`block w-full pl-10 pr-10 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                        touched.password && errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your password"
                                 />
@@ -229,7 +216,7 @@ function LoginPage() {
                                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
                             </div>
-                            {errors.password && (
+                            {touched.password && errors.password && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" />
                                     {errors.password}
