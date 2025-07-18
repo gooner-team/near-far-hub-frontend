@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import CategoryPage from './pages/CategoryPage'
 import SellerSetupPage from './pages/SellerSetupPage'
 import NotFoundPage from './pages/NotFoundPage'
+import UpgradeToSellerPage from './pages/UpgradeToSellerPage'
 
 function App() {
     return (
@@ -20,6 +21,8 @@ function App() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/category/:category" element={<CategoryPage />} />
                         <Route path="/product/:id" element={<ProductPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/upgrade-to-seller" element={<UpgradeToSellerPage />} />
                         <Route
                             path="/profile"
                             element={
