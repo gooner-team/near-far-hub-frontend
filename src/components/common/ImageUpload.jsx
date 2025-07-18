@@ -1,96 +1,110 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
-    Upload,
-    X,
-    Image as ImageIcon,
-    AlertCircle,
-    CheckCircle,
-    Loader2,
-    Plus,
-    Link as LinkIcon,
-    Camera,
-    Move,
-    Eye,
-    Trash2
+    Upload, X, Eye, Trash2, Move, Camera, Plus,
+    AlertCircle, CheckCircle, Loader2
 } from 'lucide-react'
-import { uploadAPI } from '../../services/uploadAPI'
+
+// Image type configurations from backend
+const IMAGE_CONFIGS = {
+    LISTING_PRIMARY: {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        dimensions: { width: 800, height: 600 },
+        maxCount: 1,
+        folder: 'listings/primary'
+    },
+    LISTING_GALLERY: {
+        maxSize: 5 * 1024 * 1024,
+        dimensions: { width: 800, height: 600 },
+        maxCount: 10,
+        folder: 'listings/gallery'
+    },
+    USER_AVATAR: {
+        maxSize: 2 * 1024 * 1024, // 2MB
+        dimensions: { width: 200, height: 200 },
+        maxCount: 1,
+        folder: 'users/avatars'
+    },
+    SELLER_PROFILE: {
+        maxSize: 5 * 1024 * 1024,
+        dimensions: { width: 1200, height: 400 },
+        maxCount: 1,
+        folder: 'sellers/covers'
+    }
+}
+
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 
 export default function ImageUpload({
+                                        type = 'LISTING_GALLERY',
                                         onImagesChange,
-                                        maxImages = 10,
-                                        folder = 'listings',
                                         existingImages = [],
                                         className = '',
                                         required = false
                                     }) {
+    const config = IMAGE_CONFIGS[type]
     const fileInputRef = useRef(null)
+
     const [images, setImages] = useState([])
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState({})
     const [errors, setErrors] = useState([])
-    const [showUrlInput, setShowUrlInput] = useState(false)
-    const [urlInput, setUrlInput] = useState('')
-    const [draggedIndex, setDraggedIndex] = useState(null)
-    const [previewImage, setPreviewImage] = useState(null)
     const [dragActive, setDragActive] = useState(false)
+    const [previewImage, setPreviewImage] = useState(null)
 
     // Initialize with existing images
     useEffect(() => {
-        if (existingImages && existingImages.length > 0) {
-            const processedImages = existingImages.map((img, index) => {
-                if (typeof img === 'string') {
-                    return {
-                        id: `existing-${index}`,
-                        url: img,
-                        original_url: img,
-                        medium_url: img,
-                        thumbnail_url: img,
-                        filename: `image-${index + 1}`,
-                        isExisting: true
-                    }
-                }
-                return {
-                    id: img.id || `existing-${index}`,
-                    url: img.url || img.original_url || img.medium_url || img.thumbnail_url,
-                    ...img,
-                    isExisting: true
-                }
-            })
+        if (existingImages.length > 0) {
+            const processedImages = existingImages.map((img, index) => ({
+                id: img.id || `existing-${index}`,
+                url: img.url || img.original_url || img.medium_url,
+                filename: img.filename || `image-${index + 1}`,
+                isExisting: true,
+                ...img
+            }))
             setImages(processedImages)
         }
     }, [existingImages])
 
-    // Notify parent component when images change
+    // Notify parent when images change
     useEffect(() => {
-        onImagesChange(images)
+        onImagesChange?.(images)
     }, [images, onImagesChange])
 
-    const validateFile = (file) => {
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-        const maxSize = 10 * 1024 * 1024 // 10MB
-
-        if (!validTypes.includes(file.type)) {
-            return 'Please upload only JPEG, PNG, GIF, or WebP images'
+    const validateFile = useCallback((file) => {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            return 'Only JPEG, PNG, GIF, and WebP images are allowed'
         }
-
-        if (file.size > maxSize) {
-            return 'File size must be less than 10MB'
+        if (file.size > config.maxSize) {
+            return `File size must be less than ${Math.round(config.maxSize / 1024 / 1024)}MB`
         }
-
         return null
-    }
+    }, [config.maxSize])
 
-    const handleFileSelect = async (event) => {
-        const files = Array.from(event.target.files)
-        if (files.length === 0) return
+    const uploadToAPI = async (file) => {
+        const formData = new FormData()
+        formData.append('image', file)
+        formData.append('folder', config.folder)
 
-        await uploadFiles(files)
+        const token = localStorage.getItem('auth_token')
+        const response = await fetch('http://localhost:8000/api/upload/image', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        })
+
+        if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.message || 'Upload failed')
+        }
+
+        return response.json()
     }
 
     const uploadFiles = async (files) => {
-        // Check if adding these files would exceed the limit
-        if (images.length + files.length > maxImages) {
-            setErrors([`You can only upload a maximum of ${maxImages} images`])
+        if (images.length + files.length > config.maxCount) {
+            setErrors([`Maximum ${config.maxCount} images allowed`])
             return
         }
 
@@ -100,7 +114,7 @@ export default function ImageUpload({
         const validFiles = []
         const fileErrors = []
 
-        // Validate all files first
+        // Validate all files
         files.forEach((file, index) => {
             const error = validateFile(file)
             if (error) {
@@ -116,29 +130,25 @@ export default function ImageUpload({
             return
         }
 
-        // Upload files one by one or in batches
+        // Upload files
         const uploadPromises = validFiles.map(async (file, index) => {
             const fileId = `upload-${Date.now()}-${index}`
-            setUploadProgress(prev => ({ ...prev, [fileId]: 0 }))
 
             try {
                 setUploadProgress(prev => ({ ...prev, [fileId]: 50 }))
 
-                const data = await uploadAPI.uploadImage(file, folder)
+                const result = await uploadToAPI(file)
 
-                if (data.success) {
-                    setUploadProgress(prev => ({ ...prev, [fileId]: 100 }))
-                    return {
-                        id: fileId,
-                        url: data.data.url || data.data.original_url,
-                        original_url: data.data.original_url,
-                        medium_url: data.data.medium_url,
-                        thumbnail_url: data.data.thumbnail_url,
-                        filename: data.data.filename || file.name,
-                        isExisting: false
-                    }
-                } else {
-                    throw new Error(data.message || 'Upload failed')
+                setUploadProgress(prev => ({ ...prev, [fileId]: 100 }))
+
+                return {
+                    id: fileId,
+                    url: result.data.url || result.data.original_url,
+                    original_url: result.data.original_url,
+                    medium_url: result.data.medium_url,
+                    thumbnail_url: result.data.thumbnail_url,
+                    filename: result.data.filename || file.name,
+                    isExisting: false
                 }
             } catch (error) {
                 setErrors(prev => [...prev, `Failed to upload ${file.name}: ${error.message}`])
@@ -163,131 +173,65 @@ export default function ImageUpload({
             setErrors(prev => [...prev, 'Some uploads failed'])
         } finally {
             setUploading(false)
-            // Clear the file input
-            if (fileInputRef.current) {
-                fileInputRef.current.value = ''
-            }
-        }
-    }
-
-    const handleUrlUpload = async () => {
-        if (!urlInput.trim()) return
-
-        setUploading(true)
-        setErrors([])
-
-        try {
-            const data = await uploadAPI.uploadFromUrl(urlInput.trim(), folder)
-
-            if (data.success) {
-                const newImage = {
-                    id: `url-uploaded-${Date.now()}`,
-                    url: data.data.url || data.data.original_url,
-                    original_url: data.data.original_url,
-                    medium_url: data.data.medium_url,
-                    thumbnail_url: data.data.thumbnail_url,
-                    filename: data.data.filename,
-                    isExisting: false
-                }
-                setImages(prev => [...prev, newImage])
-                setUrlInput('')
-                setShowUrlInput(false)
-            } else {
-                throw new Error(data.message || 'Upload failed')
-            }
-
-        } catch (error) {
-            setErrors([error.message])
-        } finally {
-            setUploading(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
 
     const removeImage = async (index) => {
-        const imageToRemove = images[index]
+        const image = images[index]
 
-        // Don't try to delete existing images from server
-        if (!imageToRemove.isExisting && imageToRemove.original_url) {
+        // Delete from server if not existing
+        if (!image.isExisting && image.original_url) {
             try {
-                await uploadAPI.deleteImage(imageToRemove.original_url)
+                const token = localStorage.getItem('auth_token')
+                await fetch('http://localhost:8000/api/upload/delete', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url: image.original_url })
+                })
             } catch (error) {
-                console.warn('Failed to delete image from server:', error.message)
+                console.warn('Failed to delete image from server:', error)
             }
         }
 
-        const newImages = images.filter((_, i) => i !== index)
-        setImages(newImages)
+        setImages(prev => prev.filter((_, i) => i !== index))
     }
 
     const reorderImages = (fromIndex, toIndex) => {
-        const newImages = [...images]
-        const [movedImage] = newImages.splice(fromIndex, 1)
-        newImages.splice(toIndex, 0, movedImage)
-        setImages(newImages)
+        setImages(prev => {
+            const newImages = [...prev]
+            const [movedImage] = newImages.splice(fromIndex, 1)
+            newImages.splice(toIndex, 0, movedImage)
+            return newImages
+        })
     }
 
-    const handleDragStart = (e, index) => {
-        setDraggedIndex(index)
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/html', '')
-    }
-
-    const handleDragOver = (e) => {
+    const handleDrop = useCallback((e) => {
         e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-    }
-
-    const handleDrop = (e, dropIndex) => {
-        e.preventDefault()
-        if (draggedIndex !== null && draggedIndex !== dropIndex) {
-            reorderImages(draggedIndex, dropIndex)
-        }
-        setDraggedIndex(null)
-    }
-
-    const handleDragEnd = () => {
-        setDraggedIndex(null)
-    }
-
-    const handleFileDragOver = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragActive(true)
-    }
-
-    const handleFileDragEnter = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragActive(true)
-    }
-
-    const handleFileDragLeave = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragActive(false)
-    }
-
-    const handleFileDrop = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
         setDragActive(false)
 
         const files = Array.from(e.dataTransfer.files).filter(file =>
             file.type.startsWith('image/')
         )
 
-        if (files.length > 0) {
-            uploadFiles(files)
-        }
-    }
+        if (files.length > 0) uploadFiles(files)
+    }, [])
 
-    const getImageUrl = (image) => {
-        return image.url || image.medium_url || image.thumbnail_url || image.original_url
-    }
+    const handleDragOver = useCallback((e) => {
+        e.preventDefault()
+        setDragActive(true)
+    }, [])
 
-    const getImageDisplayUrl = (image) => {
-        return image.thumbnail_url || image.medium_url || image.url || image.original_url
-    }
+    const handleDragLeave = useCallback((e) => {
+        e.preventDefault()
+        setDragActive(false)
+    }, [])
+
+    const getImageUrl = (image) => image.url || image.medium_url || image.original_url
+    const getThumbUrl = (image) => image.thumbnail_url || image.medium_url || image.url
 
     return (
         <div className={`space-y-4 ${className}`}>
@@ -295,8 +239,7 @@ export default function ImageUpload({
             {errors.length > 0 && (
                 <div className="space-y-2">
                     {errors.map((error, index) => (
-                        <div key={index}
-                             className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                        <div key={index} className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800">
                             <AlertCircle className="w-4 h-4 flex-shrink-0"/>
                             <span className="text-sm">{error}</span>
                         </div>
@@ -306,187 +249,114 @@ export default function ImageUpload({
 
             {/* Image Grid */}
             {images.length > 0 && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {images.map((image, index) => (
-                            <div
-                                key={image.id || index}
-                                className={`relative group cursor-move border-2 rounded-lg overflow-hidden transition-all duration-200 ${
-                                    draggedIndex === index
-                                        ? 'opacity-50 border-blue-400'
-                                        : 'border-gray-200 hover:border-blue-300'
-                                }`}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, index)}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, index)}
-                                onDragEnd={handleDragEnd}
-                            >
-                                <div className="aspect-square bg-gray-100 relative">
-                                    <img
-                                        src={getImageDisplayUrl(image)}
-                                        alt={`Upload ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04NSA3NUgxMTVWMTA1SDg1Vjc1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNzUgMTI1SDE0NVYxNTVINzVWMTI1WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-                                        }}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {images.map((image, index) => (
+                        <div
+                            key={image.id || index}
+                            className="relative group border-2 border-gray-200 rounded-lg overflow-hidden hover:border-blue-300 transition-colors"
+                            draggable
+                            onDragStart={(e) => e.dataTransfer.setData('text/plain', index)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                                e.preventDefault()
+                                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'))
+                                reorderImages(fromIndex, index)
+                            }}
+                        >
+                            <div className="aspect-square bg-gray-100 relative">
+                                <img
+                                    src={getThumbUrl(image)}
+                                    alt={`Upload ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04NSA3NUgxMTVWMTA1SDg1Vjc1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNzUgMTI1SDE0NVYxNTVINzVWMTI1WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Image Controls */}
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
+                                <div className="opacity-0 group-hover:opacity-100 flex space-x-2">
+                                    <button
+                                        onClick={() => setPreviewImage(image)}
+                                        className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                                    >
+                                        <Eye className="w-4 h-4 text-gray-700" />
+                                    </button>
+                                    <button
+                                        onClick={() => removeImage(index)}
+                                        className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4 text-white" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Main Image Indicator */}
+                            {index === 0 && type.includes('LISTING') && (
+                                <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                    Main
+                                </div>
+                            )}
+
+                            {/* Upload Progress */}
+                            {uploadProgress[image.id] && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-blue-600 h-1">
+                                    <div
+                                        className="h-full bg-blue-400 transition-all duration-300"
+                                        style={{ width: `${uploadProgress[image.id]}%` }}
                                     />
                                 </div>
-
-                                {/* Image Controls */}
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
-                                    <div className="opacity-0 group-hover:opacity-100 flex space-x-2">
-                                        <button
-                                            onClick={() => setPreviewImage(image)}
-                                            className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
-                                            title="Preview"
-                                        >
-                                            <Eye className="w-4 h-4 text-gray-700" />
-                                        </button>
-                                        <button
-                                            onClick={() => removeImage(index)}
-                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
-                                            title="Remove"
-                                        >
-                                            <Trash2 className="w-4 h-4 text-white" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Main Image Indicator */}
-                                {index === 0 && (
-                                    <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                        Main
-                                    </div>
-                                )}
-
-                                {/* Drag Indicator */}
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white rounded p-1">
-                                    <Move className="w-3 h-3 text-gray-600" />
-                                </div>
-
-                                {/* Upload Progress */}
-                                {uploadProgress[image.id] && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-blue-600 h-1">
-                                        <div
-                                            className="h-full bg-blue-400 transition-all duration-300"
-                                            style={{ width: `${uploadProgress[image.id]}%` }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    <p className="text-sm text-gray-600">
-                        <strong>Tip:</strong> Drag images to reorder them. The first image will be used as the main photo.
-                    </p>
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
 
             {/* Upload Area */}
-            {images.length < maxImages && (
-                <div className="space-y-4">
-                    {/* File Upload */}
-                    <div
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
-                            dragActive
-                                ? 'border-blue-400 bg-blue-50'
-                                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                        }`}
-                        onDragOver={handleFileDragOver}
-                        onDragEnter={handleFileDragEnter}
-                        onDragLeave={handleFileDragLeave}
-                        onDrop={handleFileDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={handleFileSelect}
-                            className="hidden"
-                            disabled={uploading}
-                        />
+            {images.length < config.maxCount && (
+                <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
+                        dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple={config.maxCount > 1}
+                        accept={ALLOWED_TYPES.join(',')}
+                        onChange={(e) => uploadFiles(Array.from(e.target.files))}
+                        className="hidden"
+                        disabled={uploading}
+                    />
 
-                        {uploading ? (
-                            <div className="flex flex-col items-center space-y-2">
-                                <Loader2 className="w-8 h-8 text-blue-500 animate-spin"/>
-                                <p className="text-sm text-gray-600">Uploading images...</p>
+                    {uploading ? (
+                        <div className="flex flex-col items-center space-y-2">
+                            <Loader2 className="w-8 h-8 text-blue-500 animate-spin"/>
+                            <p className="text-sm text-gray-600">Uploading...</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center space-y-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Upload className="w-6 h-6 text-blue-600"/>
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center space-y-4">
-                                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <Upload className="w-6 h-6 text-blue-600"/>
-                                </div>
-                                <div>
-                                    <p className="text-lg font-medium text-gray-900 mb-1">
-                                        Click to upload or drag and drop
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        PNG, JPG, GIF, WebP up to 10MB each • Maximum {maxImages} images
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        {images.length} of {maxImages} images uploaded
-                                    </p>
-                                </div>
+                            <div>
+                                <p className="text-lg font-medium text-gray-900 mb-1">
+                                    Drop files here or click to upload
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    {ALLOWED_TYPES.map(t => t.split('/')[1]).join(', ')} up to {Math.round(config.maxSize / 1024 / 1024)}MB
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {images.length} of {config.maxCount} images
+                                </p>
                             </div>
-                        )}
-                    </div>
-
-                    {/* URL Upload Option */}
-                    <div className="flex flex-col space-y-2">
-                        <button
-                            onClick={() => setShowUrlInput(!showUrlInput)}
-                            className="flex items-center justify-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                            disabled={uploading}
-                        >
-                            <LinkIcon className="w-4 h-4"/>
-                            <span>Upload from URL</span>
-                        </button>
-
-                        {showUrlInput && (
-                            <div className="flex space-x-2">
-                                <input
-                                    type="url"
-                                    value={urlInput}
-                                    onChange={(e) => setUrlInput(e.target.value)}
-                                    placeholder="Enter image URL..."
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    disabled={uploading}
-                                />
-                                <button
-                                    onClick={handleUrlUpload}
-                                    disabled={uploading || !urlInput.trim()}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {uploading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin"/>
-                                    ) : (
-                                        <Plus className="w-4 h-4"/>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowUrlInput(false)
-                                        setUrlInput('')
-                                    }}
-                                    className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-                                >
-                                    <X className="w-4 h-4"/>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Image Limit Notice */}
-            {images.length >= maxImages && (
-                <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-                    <AlertCircle className="w-4 h-4"/>
-                    <span className="text-sm">Maximum number of images reached ({maxImages})</span>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -494,11 +364,11 @@ export default function ImageUpload({
             {required && images.length === 0 && (
                 <div className="flex items-center space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
                     <Camera className="w-4 h-4"/>
-                    <span className="text-sm">At least one image is required for your listing</span>
+                    <span className="text-sm">At least one image is required</span>
                 </div>
             )}
 
-            {/* Image Preview Modal */}
+            {/* Preview Modal */}
             {previewImage && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
                     <div className="relative max-w-4xl max-h-full">
@@ -513,9 +383,6 @@ export default function ImageUpload({
                             alt="Preview"
                             className="max-w-full max-h-full object-contain rounded-lg"
                         />
-                        <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm">
-                            {previewImage.filename}
-                        </div>
                     </div>
                 </div>
             )}

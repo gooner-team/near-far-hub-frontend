@@ -1,103 +1,147 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Save, Eye, Upload, X } from 'lucide-react'
-import { listingsAPI } from '../../services/api'
-import { useForm } from '../../hooks'
-import { Button, Input, Card } from '../ui'
-import { CATEGORIES, CONDITIONS } from '../../constants'
-import { validateRequired, validateMinLength } from '../../utils'
+import ImageUpload from '../common/ImageUpload'
 
-export const ListingForm = ({ listingId, onSuccess }) => {
+const CATEGORIES = {
+    electronics: 'Electronics',
+    vehicles: 'Vehicles',
+    'real-estate': 'Real Estate',
+    fashion: 'Fashion',
+    'home-garden': 'Home & Garden',
+    services: 'Services'
+}
+
+const CONDITIONS = {
+    new: 'New',
+    like_new: 'Like New',
+    excellent: 'Excellent',
+    good: 'Good',
+    fair: 'Fair'
+}
+
+export default function ListingForm({ listing, onSubmit }) {
     const navigate = useNavigate()
-    const isEditing = !!listingId
-    const [imageUrls, setImageUrls] = useState([''])
+    const [formData, setFormData] = useState({
+        title: listing?.title || '',
+        description: listing?.description || '',
+        price: listing?.price || '',
+        category: listing?.category || '',
+        condition: listing?.condition || '',
+        location: listing?.location || '',
+        canDeliverGlobally: listing?.canDeliverGlobally || false,
+        requiresAppointment: listing?.requiresAppointment || false,
+        images: listing?.images || []
+    })
+    const [loading, setLoading] = useState(false)
+    const [errors, setErrors] = useState({})
 
-    const { data, errors, loading, handleChange, submit, setData } = useForm(
-        {
-            title: '',
-            description: '',
-            price: '',
-            category: '',
-            condition: '',
-            images: [],
-            location: { city: '', country: 'Latvia' },
-            can_deliver_globally: false,
-            requires_appointment: false,
-            status: 'draft'
-        },
-        {
-            title: [validateRequired, validateMinLength(3)],
-            price: [validateRequired, (v) => v > 0 ? null : 'Price must be greater than 0'],
-            category: [validateRequired]
+    const handleChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: null }))
         }
-    )
-
-    const handleImageChange = (index, value) => {
-        const newUrls = [...imageUrls]
-        newUrls[index] = value
-        setImageUrls(newUrls)
-        setData(prev => ({ ...prev, images: newUrls.filter(url => url.trim()) }))
     }
 
-    const addImageUrl = () => setImageUrls([...imageUrls, ''])
-    const removeImageUrl = (index) => {
-        const newUrls = imageUrls.filter((_, i) => i !== index)
-        setImageUrls(newUrls)
-        setData(prev => ({ ...prev, images: newUrls.filter(url => url.trim()) }))
+    const handleImagesChange = (images) => {
+        handleChange('images', images)
     }
 
-    const handleSubmit = (e) => {
+    const validate = () => {
+        const newErrors = {}
+
+        if (!formData.title.trim()) newErrors.title = 'Title is required'
+        if (!formData.price || formData.price <= 0) newErrors.price = 'Valid price is required'
+        if (!formData.category) newErrors.category = 'Category is required'
+        if (formData.images.length === 0) newErrors.images = 'At least one image is required'
+
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        submit(async (formData) => {
-            const result = isEditing
-                ? await listingsAPI.update(listingId, formData)
-                : await listingsAPI.create(formData)
 
-            onSuccess?.(result.data) || navigate('/profile')
-        })
+        if (!validate()) return
+
+        setLoading(true)
+        try {
+            await onSubmit(formData)
+            navigate('/profile')
+        } catch (error) {
+            setErrors({ submit: error.message })
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
-        <Card className="max-w-4xl mx-auto p-6">
-            <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {isEditing ? 'Edit Listing' : 'Create New Listing'}
-                </h2>
-            </div>
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-6">
+                {listing ? 'Edit Listing' : 'Create New Listing'}
+            </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                        <Input
-                            label="Title *"
-                            value={data.title}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Title *
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.title}
                             onChange={(e) => handleChange('title', e.target.value)}
-                            error={errors.title}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.title ? 'border-red-300' : 'border-gray-300'
+                            }`}
                             placeholder="Enter listing title"
-                            maxLength={255}
                         />
+                        {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category *
+                        </label>
                         <select
-                            value={data.category}
+                            value={formData.category}
                             onChange={(e) => handleChange('category', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.category ? 'border-red-300' : 'border-gray-300'
+                            }`}
                         >
                             <option value="">Select category</option>
-                            {Object.entries(CATEGORIES).map(([key, cat]) => (
-                                <option key={key} value={key}>{cat.name}</option>
+                            {Object.entries(CATEGORIES).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
                             ))}
                         </select>
                         {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
                     </div>
 
-                    {data.category !== 'services' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Price (€) *
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={formData.price}
+                            onChange={(e) => handleChange('price', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.price ? 'border-red-300' : 'border-gray-300'
+                            }`}
+                            placeholder="0.00"
+                        />
+                        {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+                    </div>
+
+                    {formData.category !== 'services' && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Condition</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Condition
+                            </label>
                             <select
-                                value={data.condition}
+                                value={formData.condition}
                                 onChange={(e) => handleChange('condition', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
@@ -109,57 +153,46 @@ export const ListingForm = ({ listingId, onSuccess }) => {
                         </div>
                     )}
 
-                    <Input
-                        label="Price (€) *"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={data.price}
-                        onChange={(e) => handleChange('price', e.target.value)}
-                        error={errors.price}
-                        placeholder="0.00"
-                    />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Location
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.location}
+                            onChange={(e) => handleChange('location', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="City, Country"
+                        />
+                    </div>
                 </div>
 
+                {/* Description */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                    </label>
                     <textarea
-                        value={data.description}
+                        value={formData.description}
                         onChange={(e) => handleChange('description', e.target.value)}
                         rows={4}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Describe your item..."
-                        maxLength={5000}
                     />
                 </div>
 
                 {/* Images */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
-                    <div className="space-y-2">
-                        {imageUrls.map((url, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <Input
-                                    type="url"
-                                    value={url}
-                                    onChange={(e) => handleImageChange(index, e.target.value)}
-                                    placeholder="Enter image URL"
-                                    className="flex-1"
-                                />
-                                {imageUrls.length > 1 && (
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => removeImageUrl(index)}>
-                                        <X className="w-4 h-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        ))}
-                        {imageUrls.length < 10 && (
-                            <Button type="button" variant="ghost" onClick={addImageUrl}>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Add Image
-                            </Button>
-                        )}
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Images *
+                    </label>
+                    <ImageUpload
+                        type="LISTING_GALLERY"
+                        onImagesChange={handleImagesChange}
+                        existingImages={formData.images}
+                        required
+                    />
+                    {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
                 </div>
 
                 {/* Options */}
@@ -167,8 +200,8 @@ export const ListingForm = ({ listingId, onSuccess }) => {
                     <label className="flex items-center space-x-3">
                         <input
                             type="checkbox"
-                            checked={data.can_deliver_globally}
-                            onChange={(e) => handleChange('can_deliver_globally', e.target.checked)}
+                            checked={formData.canDeliverGlobally}
+                            onChange={(e) => handleChange('canDeliverGlobally', e.target.checked)}
                             className="w-4 h-4 text-blue-600 rounded"
                         />
                         <span className="text-sm text-gray-700">Can deliver globally</span>
@@ -177,31 +210,38 @@ export const ListingForm = ({ listingId, onSuccess }) => {
                     <label className="flex items-center space-x-3">
                         <input
                             type="checkbox"
-                            checked={data.requires_appointment}
-                            onChange={(e) => handleChange('requires_appointment', e.target.checked)}
+                            checked={formData.requiresAppointment}
+                            onChange={(e) => handleChange('requiresAppointment', e.target.checked)}
                             className="w-4 h-4 text-blue-600 rounded"
                         />
                         <span className="text-sm text-gray-700">Requires appointment</span>
                     </label>
                 </div>
 
-                {/* Actions */}
+                {/* Submit */}
+                {errors.submit && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                        {errors.submit}
+                    </div>
+                )}
+
                 <div className="flex gap-4 pt-6 border-t">
-                    <Button
+                    <button
                         type="button"
-                        variant="secondary"
-                        onClick={() => setData(prev => ({ ...prev, status: 'draft' }))}
-                        className="flex-1"
+                        onClick={() => navigate('/profile')}
+                        className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                        <Save className="w-4 h-4 mr-2" />
-                        Save as Draft
-                    </Button>
-                    <Button type="submit" loading={loading} className="flex-1">
-                        <Eye className="w-4 h-4 mr-2" />
-                        {isEditing ? 'Update & Publish' : 'Create & Publish'}
-                    </Button>
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                        {loading ? 'Saving...' : (listing ? 'Update Listing' : 'Create Listing')}
+                    </button>
                 </div>
             </form>
-        </Card>
+        </div>
     )
 }
