@@ -1,11 +1,9 @@
-// src/App.jsx - COMPLETELY FIXED
 import { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import AuthProvider from './contexts/AuthContext'  // ✅ DEFAULT import
 import Layout from './components/common/Layout'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
-// Lazy load pages - ALL as DEFAULT imports
 const HomePage = lazy(() => import('./pages/HomePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
@@ -33,7 +31,9 @@ function App() {
                             <Route path="/categories" element={<CategoryPage />} />
                             <Route path="/category/:id" element={<CategoryPage />} />
                             <Route path="/product/:id" element={<ListingDetailPage />} />
-                            <Route path="/profile" element={
+                            <Routepath="/profile" element={<ProfilePage />} />
+                        <Route path="/upgrade-to-seller" element={<UpgradeToSellerPage />} />
+                        <Route path="/profile" element={
                                 <ProtectedRoute>
                                     <ProfilePage />
                                 </ProtectedRoute>

@@ -1,115 +1,149 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { authAPI } from '../services/api'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { API_BASE_URL } from '../config/api'
 
 const AuthContext = createContext()
 
 export const useAuth = () => {
     const context = useContext(AuthContext)
     if (!context) {
-        throw new Error('useAuth must be used within AuthProvider')
+        throw new Error('useAuth must be used within an AuthProvider')
     }
     return context
 }
 
-const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
+    const [token, setToken] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState(null)
-
-    const clearError = useCallback(() => setError(null), [])
-
-    // API call helper with auth headers
-    const apiCall = useCallback(async (url, options = {}) => {
-        const token = localStorage.getItem('auth_token')
-
-        const config = {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...(token && { 'Authorization': `Bearer ${token}` }),
-                ...options.headers
-            }
-        }
-
-        const response = await fetch(url, config)
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP ${response.status}`)
-        }
-
-        return response
-    }, [])
 
     useEffect(() => {
-        const initAuth = async () => {
+        const initializeAuth = () => {
             try {
-                const token = localStorage.getItem('auth_token')
-                const userData = localStorage.getItem('auth_user')
+                const storedToken = localStorage.getItem('auth_token')
+                const storedUser = localStorage.getItem('auth_user')
 
-                if (token && userData) {
-                    const parsedUser = JSON.parse(userData)
+                if (storedToken && storedUser) {
+                    const parsedUser = JSON.parse(storedUser)
+                    setToken(storedToken)
                     setUser(parsedUser)
                 }
-            } catch (err) {
-                console.error('Auth initialization error:', err)
+            } catch (error) {
                 localStorage.removeItem('auth_token')
                 localStorage.removeItem('auth_user')
+                localStorage.removeItem('token_type')
             } finally {
                 setIsLoading(false)
             }
         }
 
-        initAuth()
+        initializeAuth()
     }, [])
 
-    const login = useCallback(async (credentials) => {
-        try {
-            setError(null)
-            setIsLoading(true)
+    const login = async (credentials) => {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(credentials),
+        })
 
-            const { data } = await authAPI.login(credentials)
-
-            localStorage.setItem('auth_token', data.token)
-            localStorage.setItem('auth_user', JSON.stringify(data.user))
-
-            setUser(data.user)
-            return data
-        } catch (err) {
-            setError(err.message)
-            throw err
-        } finally {
-            setIsLoading(false)
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.message || 'Login failed')
         }
-    }, [])
 
-    const logout = useCallback(async () => {
+        const response_data = await response.json()
+        const data = response_data.data || response_data
+
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('auth_user', JSON.stringify(data.user))
+        localStorage.setItem('token_type', data.tokenType)
+
+        setUser(data.user)
+        setToken(data.token)
+
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        return data
+    }
+
+    const logout = async () => {
         try {
-            await authAPI.logout().catch(() => {})
+            if (token) {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                    },
+                })
+            }
         } finally {
             localStorage.removeItem('auth_token')
             localStorage.removeItem('auth_user')
+            localStorage.removeItem('token_type')
             setUser(null)
-            setError(null)
+            setToken(null)
         }
-    }, [])
+    }
 
-    const updateUser = useCallback((userData) => {
-        setUser(userData)
-        localStorage.setItem('auth_user', JSON.stringify(userData))
-    }, [])
+    const getCurrentUser = async () => {
+        if (!token) return null
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/user`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                },
+            })
+
+            if (!response.ok) {
+                await logout()
+                return null
+            }
+
+            const userData = await response.json()
+            setUser(userData)
+            return userData
+        } catch (error) {
+            await logout()
+            return null
+        }
+    }
+
+    const isAuthenticated = Boolean(user && token)
+
+    const apiCall = async (url, options = {}) => {
+        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...options.headers,
+        }
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+        }
+
+        return fetch(fullUrl, {
+            ...options,
+            headers,
+        })
+    }
 
     const value = {
         user,
-        isAuthenticated: !!user,
+        token,
         isLoading,
-        error,
+        isAuthenticated,
         login,
         logout,
-        updateUser,
-        clearError,
-        apiCall
+        getCurrentUser,
+        apiCall,
     }
 
     return (
@@ -118,5 +152,3 @@ const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     )
 }
-
-export default AuthProvider

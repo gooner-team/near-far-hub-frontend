@@ -1,6 +1,6 @@
 import {useState} from 'react'
 import {Link, useNavigate} from 'react-router-dom'
-import {Search, Menu, X, User, Heart, ShoppingBag, MapPin, Globe, LogOut} from 'lucide-react'
+import {Search, Menu, X, User, Heart, ShoppingBag, MapPin, Globe, LogOut, Crown, Shield, Star} from 'lucide-react'
 import {useAuth} from '../../contexts/AuthContext'
 
 function Header() {
@@ -37,6 +37,37 @@ function Header() {
         navigate('/login')
     }
 
+    const handleSellerUpgrade = () => {
+        setIsMenuOpen(false)
+        navigate('/upgrade-to-seller')
+    }
+
+    const getRoleIcon = (roleName) => {
+        switch (roleName) {
+            case 'admin':
+                return <Crown className="w-4 h-4 text-yellow-500" />
+            case 'moderator':
+                return <Shield className="w-4 h-4 text-blue-500" />
+            case 'seller':
+                return <Star className="w-4 h-4 text-green-500" />
+            default:
+                return <User className="w-4 h-4 text-gray-500" />
+        }
+    }
+
+    const getRoleBadgeColor = (roleName) => {
+        switch (roleName) {
+            case 'admin':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+            case 'moderator':
+                return 'bg-blue-100 text-blue-800 border-blue-200'
+            case 'seller':
+                return 'bg-green-100 text-green-800 border-green-200'
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-200'
+        }
+    }
+
     return (
         <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
             {/* Top Bar */}
@@ -55,11 +86,28 @@ function Header() {
                         </div>
                         <div className="flex items-center space-x-4">
                             <Link to="/help" className="hover:text-blue-300 transition-colors">Help</Link>
-                            <Link to="/sell" className="hover:text-blue-300 transition-colors">Sell</Link>
+                            {isAuthenticated && user?.permissions?.canSell ? (
+                                <Link to="/sell" className="hover:text-blue-300 transition-colors">Sell</Link>
+                            ) : (
+                                isAuthenticated && user?.permissions?.canUpgradeToSeller && (
+                                    <button
+                                        onClick={handleSellerUpgrade}
+                                        className="hover:text-blue-300 transition-colors"
+                                    >
+                                        Become a Seller
+                                    </button>
+                                )
+                            )}
                             {isAuthenticated && user && (
-                                <span className="text-blue-300">
-                                    Hello, {user.name}!
-                                </span>
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-blue-300">
+                                        Hello, {user.name}!
+                                    </span>
+                                    <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getRoleBadgeColor(user.role?.name)}`}>
+                                        {getRoleIcon(user.role?.name)}
+                                        <span>{user.role?.displayName || 'Buyer'}</span>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -153,6 +201,7 @@ function Header() {
                 </div>
             </div>
 
+            {/* Mobile Menu */}
             {isMenuOpen && (
                 <div className="md:hidden bg-white border-t border-gray-200">
                     <div className="px-4 py-2 space-y-2">
@@ -181,12 +230,29 @@ function Header() {
                         {!isLoading && (
                             isAuthenticated ? (
                                 <>
+                                    <div className="px-3 py-2 text-sm text-gray-500">
+                                        <div className="flex items-center space-x-2">
+                                            <span>Role:</span>
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getRoleBadgeColor(user?.role?.name)}`}>
+                                                {getRoleIcon(user?.role?.name)}
+                                                <span>{user?.role?.displayName || 'Buyer'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={handleProfileClick}
                                         className="block w-full text-left px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
                                     >
                                         Profile
                                     </button>
+                                    {user?.permissions?.canUpgradeToSeller && (
+                                        <button
+                                            onClick={handleSellerUpgrade}
+                                            className="block w-full text-left px-3 py-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                                        >
+                                            Upgrade to Seller
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleLogout}
                                         className="block w-full text-left px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
@@ -204,13 +270,15 @@ function Header() {
                             )
                         )}
 
-                        <Link
-                            to="/sell"
-                            className="block px-3 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-center"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Start Selling
-                        </Link>
+                        {isAuthenticated && user?.permissions?.canSell && (
+                            <Link
+                                to="/sell"
+                                className="block px-3 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-center"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Start Selling
+                            </Link>
+                        )}
                     </div>
                 </div>
             )}
