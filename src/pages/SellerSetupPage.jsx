@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Store, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useForm } from '../hooks'
-import { Card, Button, Input, Section } from '../components/ui'
+import { Card, Button, Input, Section } from '../components/ui/index.jsx'
 import { validateRequired } from '../utils'
 
 const steps = [
@@ -21,7 +21,7 @@ const daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]
 
-export const SellerSetupPage = () => {
+const SellerSetupPage = () => {
     const navigate = useNavigate()
     const [currentStep, setCurrentStep] = useState(1)
     const [availability, setAvailability] = useState(
@@ -217,3 +217,5 @@ export const SellerSetupPage = () => {
         </div>
     )
 }
+
+export default SellerSetupPage

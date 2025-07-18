@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect, useCallback } from 'react'
+import { listingsAPI } from '../services/api'
 
 // Form Hook
 export const useForm = (initialData, validationRules = {}) => {
@@ -7,12 +7,14 @@ export const useForm = (initialData, validationRules = {}) => {
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
 
-    const handleChange = (field, value) => {
+    const handleChange = useCallback((field, value) => {
         setData(prev => ({ ...prev, [field]: value }))
-        if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }))
-    }
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: null }))
+        }
+    }, [errors])
 
-    const validate = () => {
+    const validate = useCallback(() => {
         const newErrors = {}
         Object.entries(validationRules).forEach(([field, rules]) => {
             const value = data[field]
@@ -21,33 +23,37 @@ export const useForm = (initialData, validationRules = {}) => {
         })
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
-    }
+    }, [data, validationRules])
 
-    const submit = async (submitFn) => {
+    const submit = useCallback(async (submitFn) => {
         if (!validate()) return false
+
         setLoading(true)
         try {
             const result = await submitFn(data)
             return result
+        } catch (error) {
+            setErrors(prev => ({ ...prev, submit: error.message }))
+            return false
         } finally {
             setLoading(false)
         }
-    }
+    }, [data, validate])
 
     return { data, errors, loading, handleChange, submit, setData, setErrors }
 }
 
 // API Hook
-export const useAPI = (apiFunction, dependencies = []) => {
+export const useAPI = (apiCall, dependencies = [], immediate = true) => {
     const [data, setData] = useState(null)
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(immediate)
     const [error, setError] = useState(null)
 
-    const execute = async (...args) => {
-        setLoading(true)
-        setError(null)
+    const execute = useCallback(async (...args) => {
         try {
-            const result = await apiFunction(...args)
+            setLoading(true)
+            setError(null)
+            const result = await apiCall(...args)
             setData(result)
             return result
         } catch (err) {
@@ -56,10 +62,10 @@ export const useAPI = (apiFunction, dependencies = []) => {
         } finally {
             setLoading(false)
         }
-    }
+    }, [apiCall])
 
     useEffect(() => {
-        execute()
+        if (immediate) execute()
     }, dependencies)
 
     return { data, loading, error, execute, refetch: execute }
@@ -67,7 +73,10 @@ export const useAPI = (apiFunction, dependencies = []) => {
 
 // Listings Hook
 export const useListings = (filters = {}) => {
-    const { data, loading, error, execute } = useAPI(() => listingsAPI.getListings(filters), [filters])
+    const { data, loading, error, execute } = useAPI(
+        () => listingsAPI.getAll(filters),
+        [JSON.stringify(filters)]
+    )
 
     return {
         listings: data?.data || [],

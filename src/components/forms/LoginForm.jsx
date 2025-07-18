@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useForm } from '../../hooks'
-import { Button, Input, Card } from '../ui'
+import { Button, Input, Card } from '../ui/index.jsx'
 import { validateEmail, validateRequired } from '../../utils'
 
-export const LoginForm = () => {
+const LoginForm = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const { login } = useAuth()
@@ -96,3 +96,5 @@ export const LoginForm = () => {
         </Card>
     )
 }
+
+export default LoginForm

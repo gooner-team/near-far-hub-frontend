@@ -1,31 +1,28 @@
+// Export all API services from single entry point
+export { authAPI, listingsAPI, uploadAPI } from './api'
+
+// Simplified service wrappers for easier usage
 export const authService = {
-    login: (credentials) => api.post('/auth/login', credentials),
-    logout: () => api.post('/auth/logout'),
-    getUser: () => api.get('/auth/user'),
-    register: (data) => api.post('/auth/register', data)
+    login: (credentials) => authAPI.login(credentials),
+    logout: () => authAPI.logout(),
+    getUser: () => authAPI.getUser(),
+    register: (data) => authAPI.register(data)
 }
 
 export const listingService = {
-    getAll: (filters = {}) => api.get('/listings', filters),
-    getById: (id) => api.get(`/listings/${id}`),
-    create: (data) => api.post('/listings', data),
-    update: (id, data) => api.put(`/listings/${id}`, data),
-    delete: (id) => api.delete(`/listings/${id}`),
-    getMy: (filters = {}) => api.get('/listings/my/listings', filters),
-    getFeatured: (filters = {}) => api.get('/listings/featured', filters),
-    publish: (id) => api.post(`/listings/${id}/publish`),
-    unpublish: (id) => api.post(`/listings/${id}/unpublish`),
-    markSold: (id) => api.post(`/listings/${id}/mark-sold`)
+    getAll: (filters) => listingsAPI.getAll(filters),
+    getById: (id) => listingsAPI.getById(id),
+    create: (data) => listingsAPI.create(data),
+    update: (id, data) => listingsAPI.update(id, data),
+    delete: (id) => listingsAPI.delete(id),
+    getMy: (filters) => listingsAPI.getCurrentUserListings(filters),
+    getFeatured: (filters) => listingsAPI.getFeaturedListings(filters),
+    publish: (id) => listingsAPI.publishListing(id),
+    unpublish: (id) => listingsAPI.unpublishListing(id),
+    markSold: (id) => listingsAPI.markAsSold(id)
 }
 
 export const uploadService = {
-    image: (file, folder, onProgress) => {
-        const formData = new FormData()
-        formData.append('image', file)
-        formData.append('folder', folder)
-        return api.upload('/upload/image', formData, onProgress)
-    },
-
-    fromUrl: (url, folder) => api.post('/upload/from-url', { url, folder }),
-    delete: (url) => api.delete('/upload/delete', { url })
+    uploadImage: (file, folder) => uploadAPI.uploadImage(file, folder),
+    deleteImage: (url) => uploadAPI.deleteImage(url)
 }

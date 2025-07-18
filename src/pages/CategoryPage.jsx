@@ -3,21 +3,20 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useListings } from '../hooks'
 import { Section, ListingView, Button } from '../components/ui'
-import { CATEGORIES_DATA } from '../data'
 
-export const CategoryPage = () => {
-    const { category } = useParams()
+function CategoryPage() {
+    const { id } = useParams()
     const [likedItems, setLikedItems] = useState(new Set())
 
-    const categoryInfo = CATEGORIES_DATA.find(cat => cat.id === category) || {
+    const categoryInfo = {
         name: 'Category',
         description: 'Browse products in this category'
     }
 
-    const { listings, loading, error } = useListings({ category })
+    const { listings, loading, error } = useListings({ category: id })
 
-    const toggleLike = (id) => {
-        setLikedItems(prev => new Set(prev.has(id) ? [...prev].filter(i => i !== id) : [...prev, id]))
+    const toggleLike = (itemId) => {
+        setLikedItems(prev => new Set(prev.has(itemId) ? [...prev].filter(i => i !== itemId) : [...prev, itemId]))
     }
 
     return (
@@ -47,3 +46,5 @@ export const CategoryPage = () => {
         </div>
     )
 }
+
+export default CategoryPage

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal } from 'lucide-react'
 import { useListings } from '../hooks'
-import { Section, FilterPanel, ListingView, Button } from '../components/ui'
+import { Section, FilterPanel, ListingView, Button } from '../components/ui/index.jsx'
 import { CATEGORIES_DATA } from '../data'
 
 const filterConfig = [

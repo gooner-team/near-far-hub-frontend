@@ -1,5 +1,5 @@
 import { X, SlidersHorizontal } from 'lucide-react'
-import { Button, Input } from './index'
+import { Button, Input } from './index.jsx'
 
 export const FilterPanel = ({
                                 filters,

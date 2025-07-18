@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Grid, List, Search } from 'lucide-react'
-import { Button, DataRenderer } from './index'
+import { Button, DataRenderer } from './index.jsx'
 import { ListingCard } from '../listings/ListingCard'
 
 export const ListingView = ({

@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, MapPin, Globe, Calendar, Truck } from 'lucide-react'
-import { Button, Input } from '../ui'
-import { CATEGORIES } from '../../constants'
+import { Button, Input } from '../ui/index.jsx'
 
-export const Hero = () => {
+const CATEGORIES = {
+    all: 'All Categories',
+    electronics: 'Electronics',
+    vehicles: 'Vehicles',
+    'real-estate': 'Real Estate',
+    fashion: 'Fashion',
+    'home-garden': 'Home & Garden',
+    services: 'Services'
+}
+
+function Hero() {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
     const [category, setCategory] = useState('all')
@@ -54,9 +63,8 @@ export const Hero = () => {
                                     onChange={(e) => setCategory(e.target.value)}
                                     className="lg:w-64 px-4 py-3 bg-white text-gray-700 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-blue-300"
                                 >
-                                    <option value="all">All Categories</option>
                                     {Object.entries(CATEGORIES).map(([key, cat]) => (
-                                        <option key={key} value={key}>{cat.name}</option>
+                                        <option key={key} value={key}>{cat}</option>
                                     ))}
                                 </select>
                                 <Button type="submit" className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
@@ -93,3 +101,5 @@ export const Hero = () => {
         </div>
     )
 }
+
+export default Hero

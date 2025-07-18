@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Heart, Share2, MapPin, Eye, Calendar, MessageCircle, Shield } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { listingsAPI } from '../services/api'
 import { Card, Button, Badge } from '../components/ui'
 import { formatPrice, formatTimeAgo } from '../utils'
+import { MOCK_LISTINGS } from '../data'
 
-export const ListingDetailPage = () => {
+function ListingDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const { isAuthenticated } = useAuth()
@@ -16,25 +16,40 @@ export const ListingDetailPage = () => {
     const [selectedImage, setSelectedImage] = useState(0)
 
     useEffect(() => {
-        listingsAPI.getById(id)
-            .then(({ data }) => setListing(data))
-            .catch(() => navigate('/404'))
-            .finally(() => setLoading(false))
-    }, [id, navigate])
+        // Simulate API call with mock data
+        setTimeout(() => {
+            const foundListing = MOCK_LISTINGS.find(l => l.id.toString() === id)
+            if (foundListing) {
+                setListing(foundListing)
+            }
+            setLoading(false)
+        }, 500)
+    }, [id])
 
     const handleAction = (action) => {
         if (!isAuthenticated) {
             navigate('/login', { state: { from: { pathname: `/product/${id}` } } })
             return
         }
-        // Handle action
+        console.log('Action:', action)
     }
 
-    if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            </div>
+        )
+    }
 
-    if (!listing) return <div className="text-center py-20">Listing not found</div>
-
-    const images = listing.images?.length ? listing.images : ['/placeholder.jpg']
+    if (!listing) {
+        return (
+            <div className="text-center py-20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Listing not found</h2>
+                <Button onClick={() => navigate('/')}>Go Home</Button>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -49,32 +64,13 @@ export const ListingDetailPage = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
                         <Card className="overflow-hidden">
                             <img
-                                src={images[selectedImage]}
+                                src={listing.mainImage}
                                 alt={listing.title}
                                 className="w-full h-80 object-cover"
-                                onError={(e) => e.target.src = '/placeholder.jpg'}
                             />
-                            {images.length > 1 && (
-                                <div className="p-4 border-t">
-                                    <div className="flex space-x-2 overflow-x-auto">
-                                        {images.map((image, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => setSelectedImage(index)}
-                                                className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${
-                                                    selectedImage === index ? 'border-blue-500' : 'border-gray-200'
-                                                }`}
-                                            >
-                                                <img src={image} alt="" className="w-full h-full object-cover" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </Card>
 
                         <Card className="p-6">
@@ -83,21 +79,20 @@ export const ListingDetailPage = () => {
                                     <h1 className="text-2xl font-bold text-gray-900 mb-2">{listing.title}</h1>
                                     <div className="flex items-center space-x-2">
                                         <Badge variant="blue">{listing.categoryLabel}</Badge>
-                                        {listing.condition && <Badge>{listing.condition}</Badge>}
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Button variant="ghost" size="sm" onClick={() => setIsLiked(!isLiked)}>
                                         <Heart className={`w-5 h-5 ${isLiked ? 'text-red-600 fill-current' : 'text-gray-400'}`} />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => navigator.share?.({ url: window.location.href })}>
+                                    <Button variant="ghost" size="sm">
                                         <Share2 className="w-5 h-5" />
                                     </Button>
                                 </div>
                             </div>
 
                             <div className="text-3xl font-bold text-gray-900 mb-4">
-                                {formatPrice(listing.price)}
+                                {listing.formattedPrice}
                             </div>
 
                             <div className="flex items-center space-x-4 text-sm text-gray-600 mb-6">
@@ -109,19 +104,15 @@ export const ListingDetailPage = () => {
                                     <Eye className="w-4 h-4 mr-1" />
                                     <span>{listing.viewsCount} views</span>
                                 </div>
-                                <span>{formatTimeAgo(listing.createdAt)}</span>
                             </div>
 
-                            {listing.description && (
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                                    <p className="text-gray-700 whitespace-pre-wrap">{listing.description}</p>
-                                </div>
-                            )}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
+                                <p className="text-gray-700">This is a great product with excellent quality and features.</p>
+                            </div>
                         </Card>
                     </div>
 
-                    {/* Sidebar */}
                     <div className="space-y-6">
                         <Card className="p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Seller Information</h3>
@@ -138,17 +129,10 @@ export const ListingDetailPage = () => {
                             </div>
 
                             <div className="space-y-3">
-                                {listing.requiresAppointment ? (
-                                    <Button onClick={() => handleAction('appointment')} className="w-full">
-                                        <Calendar className="w-4 h-4 mr-2" />
-                                        Book Appointment
-                                    </Button>
-                                ) : (
-                                    <Button onClick={() => handleAction('contact')} className="w-full">
-                                        <MessageCircle className="w-4 h-4 mr-2" />
-                                        Contact Seller
-                                    </Button>
-                                )}
+                                <Button onClick={() => handleAction('contact')} className="w-full">
+                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                    Contact Seller
+                                </Button>
 
                                 <Button variant="secondary" onClick={() => handleAction('message')} className="w-full">
                                     Send Message
@@ -168,3 +152,5 @@ export const ListingDetailPage = () => {
         </div>
     )
 }
+
+export default ListingDetailPage
