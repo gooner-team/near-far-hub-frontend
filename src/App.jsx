@@ -1,16 +1,20 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import AuthProvider from './contexts/AuthContext'  // ✅ DEFAULT import
+import {AuthProvider} from './contexts/AuthContext'
 import Layout from './components/common/Layout'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'))
 const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const ListingDetailPage = lazy(() => import('./pages/ListingDetailPage'))
 const CreateListingPage = lazy(() => import('./pages/CreateListingPage'))
+const EditListingPage = lazy(() => import('./pages/EditListingPage'))
 const SellerSetupPage = lazy(() => import('./pages/SellerSetupPage'))
+const UpgradeToSellerPage = lazy(() => import('./pages/UpgradeToSellerPage'))
+const BrowseListingsPage = lazy(() => import('./pages/BrowseListingsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 const LoadingFallback = () => (
@@ -28,12 +32,14 @@ function App() {
                         <Routes>
                             <Route path="/" element={<HomePage />} />
                             <Route path="/login" element={<LoginPage />} />
-                            <Route path="/categories" element={<CategoryPage />} />
+                            <Route path="/categories" element={<CategoriesPage />} />
                             <Route path="/category/:id" element={<CategoryPage />} />
                             <Route path="/product/:id" element={<ListingDetailPage />} />
-                            <Routepath="/profile" element={<ProfilePage />} />
-                        <Route path="/upgrade-to-seller" element={<UpgradeToSellerPage />} />
-                        <Route path="/profile" element={
+                            <Route path="/browse" element={<BrowseListingsPage />} />
+                            <Route path="/search" element={<BrowseListingsPage />} />
+
+                            {/* Protected Routes */}
+                            <Route path="/profile" element={
                                 <ProtectedRoute>
                                     <ProfilePage />
                                 </ProtectedRoute>
@@ -43,11 +49,22 @@ function App() {
                                     <CreateListingPage />
                                 </ProtectedRoute>
                             } />
+                            <Route path="/edit-listing/:id" element={
+                                <ProtectedRoute>
+                                    <EditListingPage />
+                                </ProtectedRoute>
+                            } />
                             <Route path="/seller/setup" element={
                                 <ProtectedRoute>
                                     <SellerSetupPage />
                                 </ProtectedRoute>
                             } />
+                            <Route path="/upgrade-to-seller" element={
+                                <ProtectedRoute>
+                                    <UpgradeToSellerPage />
+                                </ProtectedRoute>
+                            } />
+
                             <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                     </Suspense>

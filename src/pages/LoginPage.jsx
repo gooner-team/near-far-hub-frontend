@@ -2,32 +2,30 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useValidation, commonRules, validators } from '../utils/validation'
+import { useForm } from '../hooks'
 
 function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isAuthenticated } = useAuth()
-    const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
 
     const from = location.state?.from?.pathname || '/'
 
+    // Form validation rules
     const validationRules = {
-        email: commonRules.email,
-        password: [validators.required, (value) => validators.minLength(value, 6)]
+        // email: [validators.required, validators.email],
+        // password: [validators.required, validators.minLength(6)]
     }
 
     const {
         data: formData,
         errors,
-        touched,
+        loading,
         handleChange,
-        handleBlur,
-        validateAll,
-        reset
-    } = useValidation(
+        submit
+    } = useForm(
         { email: '', password: '', remember: false },
         validationRules
     )
@@ -44,62 +42,47 @@ function LoginPage() {
 
         handleChange(name, inputValue)
 
+        // Clear message when user starts typing
         if (message.text) {
             setMessage({ type: '', text: '' })
         }
     }
 
-    const handleInputBlur = (e) => {
-        const { name } = e.target
-        handleBlur(name)
-    }
-
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!validateAll()) {
-            return
-        }
+        const success = await submit(async (data) => {
+            try {
+                const result = await login(data)
 
-        setIsLoading(true)
-        setMessage({ type: '', text: '' })
-
-        try {
-            const result = await login(formData)
-
-            setMessage({
-                type: 'success',
-                text: 'Login successful! Redirecting...'
-            })
-
-            setTimeout(() => {
-                navigate(from, { replace: true })
-            }, 1000)
-
-        } catch (error) {
-            if (error.message.includes('credentials') || error.message.includes('Invalid')) {
                 setMessage({
-                    type: 'error',
-                    text: 'Invalid email or password'
+                    type: 'success',
+                    text: 'Login successful! Redirecting...'
                 })
-            } else if (error.status === 422) {
-                setMessage({
-                    type: 'error',
-                    text: 'Please check your email and password'
-                })
-            } else if (error.status === 429) {
-                setMessage({
-                    type: 'error',
-                    text: 'Too many login attempts. Please try again later.'
-                })
-            } else {
-                setMessage({
-                    type: 'error',
-                    text: 'Login failed. Please check your credentials and try again.'
-                })
+
+                // Redirect after short delay
+                setTimeout(() => {
+                    navigate(from, { replace: true })
+                }, 1000)
+
+                return result
+            } catch (error) {
+                // Handle different error types
+                if (error.message.includes('credentials') || error.message.includes('Invalid')) {
+                    throw new Error('Invalid email or password')
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    throw new Error('Network error - please check your connection')
+                } else {
+                    throw new Error('Login failed. Please try again.')
+                }
             }
-        } finally {
-            setIsLoading(false)
+        })
+
+        if (!success && errors.submit) {
+            setMessage({
+                type: 'error',
+                text: errors.submit
+            })
         }
     }
 
@@ -173,14 +156,13 @@ function LoginPage() {
                                     autoComplete="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    onBlur={handleInputBlur}
                                     className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        touched.email && errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                        errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your email"
                                 />
                             </div>
-                            {touched.email && errors.email && (
+                            {errors.email && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" />
                                     {errors.email}
@@ -202,9 +184,8 @@ function LoginPage() {
                                     autoComplete="current-password"
                                     value={formData.password}
                                     onChange={handleInputChange}
-                                    onBlur={handleInputBlur}
                                     className={`block w-full pl-10 pr-10 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        touched.password && errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                        errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your password"
                                 />
@@ -216,7 +197,7 @@ function LoginPage() {
                                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
                             </div>
-                            {touched.password && errors.password && (
+                            {errors.password && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" />
                                     {errors.password}
@@ -250,10 +231,10 @@ function LoginPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={loading}
                             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-white font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg"
                         >
-                            {isLoading ? (
+                            {loading ? (
                                 <div className="flex items-center">
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                                     Signing in...
