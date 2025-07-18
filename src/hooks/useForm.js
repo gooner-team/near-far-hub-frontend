@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { listingsAPI } from '../services/api'
 
-export function useForm(initialData, validationRules = {}) {
+export const useForm = (initialData, validationRules = {}) => {
     const [data, setData] = useState(initialData)
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
@@ -18,15 +19,15 @@ export function useForm(initialData, validationRules = {}) {
     const handleBlur = useCallback((field) => {
         setTouched(prev => ({ ...prev, [field]: true }))
 
-        // Validate field on blur
+        // Validate field on blur if touched
         const rules = validationRules[field]
-        if (rules) {
+        if (rules && touched[field]) {
             const error = rules.find(rule => rule(data[field]))
             if (error) {
                 setErrors(prev => ({ ...prev, [field]: error(data[field]) }))
             }
         }
-    }, [data, validationRules])
+    }, [data, validationRules, touched])
 
     const validate = useCallback(() => {
         const newErrors = {}
@@ -69,12 +70,12 @@ export function useForm(initialData, validationRules = {}) {
         data,
         setData,
         errors,
-        touched,
         loading,
+        touched,
         handleChange,
         handleBlur,
-        validate,
         submit,
-        reset
+        reset,
+        isValid: Object.keys(errors).length === 0
     }
 }

@@ -18,6 +18,30 @@ const AuthProvider = ({ children }) => {
 
     const clearError = useCallback(() => setError(null), [])
 
+    // API call helper with auth headers
+    const apiCall = useCallback(async (url, options = {}) => {
+        const token = localStorage.getItem('auth_token')
+
+        const config = {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...options.headers
+            }
+        }
+
+        const response = await fetch(url, config)
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP ${response.status}`)
+        }
+
+        return response
+    }, [])
+
     useEffect(() => {
         const initAuth = async () => {
             try {
@@ -84,7 +108,8 @@ const AuthProvider = ({ children }) => {
         login,
         logout,
         updateUser,
-        clearError
+        clearError,
+        apiCall
     }
 
     return (
