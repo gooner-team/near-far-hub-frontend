@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useValidation, commonRules, validators } from '../../utils/validation.js'
 
@@ -25,8 +25,7 @@ function LoginPage() {
         touched,
         handleChange,
         handleBlur,
-        validateAll,
-        reset
+        validateAll
     } = useValidation(
         { email: '', password: '', remember: false },
         validationRules
@@ -41,63 +40,32 @@ function LoginPage() {
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target
         const inputValue = type === 'checkbox' ? checked : value
-
         handleChange(name, inputValue)
-
-        if (message.text) {
-            setMessage({ type: '', text: '' })
-        }
+        if (message.text) setMessage({ type: '', text: '' })
     }
 
     const handleInputBlur = (e) => {
-        const { name } = e.target
-        handleBlur(name)
+        handleBlur(e.target.name)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-
-        if (!validateAll()) {
-            return
-        }
+        if (!validateAll()) return
 
         setIsLoading(true)
         setMessage({ type: '', text: '' })
 
         try {
-            const result = await login(formData)
-
-            setMessage({
-                type: 'success',
-                text: 'Login successful! Redirecting...'
-            })
-
-            setTimeout(() => {
-                navigate(from, { replace: true })
-            }, 1000)
-
+            await login(formData)
+            setMessage({ type: 'success', text: 'Login successful! Redirecting...' })
+            setTimeout(() => navigate(from, { replace: true }), 1000)
         } catch (error) {
-            if (error.message.includes('credentials') || error.message.includes('Invalid')) {
-                setMessage({
-                    type: 'error',
-                    text: 'Invalid email or password'
-                })
-            } else if (error.status === 422) {
-                setMessage({
-                    type: 'error',
-                    text: 'Please check your email and password'
-                })
-            } else if (error.status === 429) {
-                setMessage({
-                    type: 'error',
-                    text: 'Too many login attempts. Please try again later.'
-                })
-            } else {
-                setMessage({
-                    type: 'error',
-                    text: 'Login failed. Please check your credentials and try again.'
-                })
-            }
+            const errorMessage = error.message.includes('credentials') || error.message.includes('Invalid')
+                ? 'Invalid email or password'
+                : error.status === 429
+                    ? 'Too many login attempts. Please try again later.'
+                    : 'Login failed. Please check your credentials and try again.'
+            setMessage({ type: 'error', text: errorMessage })
         } finally {
             setIsLoading(false)
         }
@@ -106,12 +74,11 @@ function LoginPage() {
     const handleDemoLogin = () => {
         handleChange('email', 'test@example.com')
         handleChange('password', 'password')
-        handleChange('remember', false)
         setMessage({ type: '', text: '' })
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
             <div className="max-w-md w-full space-y-8">
                 {/* Header */}
                 <div className="text-center">
@@ -119,32 +86,24 @@ function LoginPage() {
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                             <span className="text-white font-bold text-xl">NF</span>
                         </div>
-                        <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            NearFar Hub
-                        </span>
+                        <span className="text-2xl font-bold text-gradient">NearFar Hub</span>
                     </Link>
 
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                        Welcome back!
-                    </h2>
-                    <p className="text-gray-600">
-                        Sign in to your account to continue buying and selling
-                    </p>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back!</h2>
+                    <p className="text-gray-600">Sign in to your account to continue</p>
 
                     {location.state?.from && (
                         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-800">
-                                Please sign in to access your account
-                            </p>
+                            <p className="text-sm text-blue-800">Please sign in to access your account</p>
                         </div>
                     )}
                 </div>
 
-                {/* Login Form */}
-                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                    {/* Success/Error Messages */}
+                {/* Form */}
+                <div className="card p-8">
+                    {/* Messages */}
                     {message.text && (
-                        <div className={`mb-6 p-4 rounded-xl flex items-center space-x-3 ${
+                        <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${
                             message.type === 'success'
                                 ? 'bg-green-50 border border-green-200 text-green-800'
                                 : 'bg-red-50 border border-red-200 text-red-800'
@@ -159,7 +118,7 @@ function LoginPage() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Email Field */}
+                        {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                                 Email Address
@@ -174,9 +133,7 @@ function LoginPage() {
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     onBlur={handleInputBlur}
-                                    className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        touched.email && errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    className={`input pl-10 ${touched.email && errors.email ? 'input-error' : ''}`}
                                     placeholder="Enter your email"
                                 />
                             </div>
@@ -188,7 +145,7 @@ function LoginPage() {
                             )}
                         </div>
 
-                        {/* Password Field */}
+                        {/* Password */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                                 Password
@@ -203,9 +160,7 @@ function LoginPage() {
                                     value={formData.password}
                                     onChange={handleInputChange}
                                     onBlur={handleInputBlur}
-                                    className={`block w-full pl-10 pr-10 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                        touched.password && errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    className={`input pl-10 pr-10 ${touched.password && errors.password ? 'input-error' : ''}`}
                                     placeholder="Enter your password"
                                 />
                                 <button
@@ -224,7 +179,7 @@ function LoginPage() {
                             )}
                         </div>
 
-                        {/* Remember Me & Forgot Password */}
+                        {/* Remember & Forgot */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center">
                                 <input
@@ -239,58 +194,45 @@ function LoginPage() {
                                     Remember me
                                 </label>
                             </div>
-                            <Link
-                                to="/forgot-password"
-                                className="text-sm text-blue-600 hover:text-blue-500 font-medium"
-                            >
+                            <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
                                 Forgot password?
                             </Link>
                         </div>
 
-                        {/* Submit Button */}
+                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-white font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg"
+                            className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isLoading ? (
-                                <div className="flex items-center">
+                                <div className="flex items-center justify-center">
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                                     Signing in...
                                 </div>
                             ) : (
-                                <div className="flex items-center">
-                                    Sign in
-                                    <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </div>
+                                'Sign in'
                             )}
                         </button>
 
-                        {/* Demo Button */}
-                        <button
-                            type="button"
-                            onClick={handleDemoLogin}
-                            className="w-full py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
-                        >
+                        {/* Demo */}
+                        <button type="button" onClick={handleDemoLogin} className="w-full btn-secondary text-sm">
                             Fill Demo Credentials
                         </button>
                     </form>
 
-                    {/* Sign Up Link */}
+                    {/* Sign Up */}
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">
                             Don't have an account?{' '}
-                            <Link
-                                to="/register"
-                                className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
-                            >
+                            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
                                 Sign up here
                             </Link>
                         </p>
                     </div>
 
-                    {/* Demo Credentials */}
-                    <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                    {/* Demo Info */}
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                         <p className="text-xs text-gray-600 text-center mb-2 font-medium">Demo Credentials</p>
                         <div className="text-xs text-gray-500 space-y-1">
                             <p><strong>Email:</strong> test@example.com</p>
@@ -299,12 +241,9 @@ function LoginPage() {
                     </div>
                 </div>
 
-                {/* Additional Links */}
+                {/* Footer */}
                 <div className="text-center space-y-2">
-                    <Link
-                        to="/"
-                        className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                    >
+                    <Link to="/" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                         ← Back to homepage
                     </Link>
                     <div className="text-xs text-gray-500">
