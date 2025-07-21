@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Star, Crown, Shield, Check, X, Loader2, ArrowRight } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.jsx'
 
 function UpgradeToSellerPage() {
     const [isUpgrading, setIsUpgrading] = useState(false)

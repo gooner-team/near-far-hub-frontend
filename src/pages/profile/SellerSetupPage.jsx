@@ -13,7 +13,7 @@ import {
     CreditCard,
     ArrowLeft
 } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.jsx'
 
 function SellerSetupPage() {
     const navigate = useNavigate()

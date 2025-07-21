@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-import { useValidation, commonRules, validators } from '../utils/validation'
+import { useAuth } from '../../contexts/AuthContext.jsx'
+import { useValidation, commonRules, validators } from '../../utils/validation.js'
 
 function LoginPage() {
     const navigate = useNavigate()

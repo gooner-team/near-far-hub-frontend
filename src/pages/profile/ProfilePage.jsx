@@ -23,7 +23,7 @@ import {
     CheckCircle,
     AlertCircle
 } from 'lucide-react'
-import {useAuth} from '../contexts/AuthContext'
+import {useAuth} from '../../contexts/AuthContext.jsx'
 
 function ProfilePage() {
     const {user, logout, isAuthenticated, isLoading, apiCall} = useAuth()

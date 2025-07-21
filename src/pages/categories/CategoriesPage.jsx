@@ -181,7 +181,7 @@ function CategoriesPage() {
                     </div>
                 </div>
 
-                {/* Categories Grid */}
+                {/* categories Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {categories.map((category) => {
                         const IconComponent = category.icon
@@ -232,7 +232,7 @@ function CategoriesPage() {
                     })}
                 </div>
 
-                {/* Popular Categories */}
+                {/* Popular categories */}
                 <div className="mt-16">
                     <h2 className="text-2xl font-bold text-gray-900 mb-8">Most Popular Categories</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
