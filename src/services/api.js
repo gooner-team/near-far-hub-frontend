@@ -1,3 +1,4 @@
+// src/services/api.js
 const API_BASE_URL = 'http://localhost:8000/api'
 
 const handleResponse = async (response) => {
@@ -85,6 +86,51 @@ export const authAPI = {
     },
 }
 
+export const userAPI = {
+    getProfile: async () => {
+        return apiRequest('/profile')
+    },
+
+    updateProfile: async (profileData) => {
+        return apiRequest('/profile', {
+            method: 'PUT',
+            body: JSON.stringify(profileData),
+        })
+    },
+
+    getUserListings: async () => {
+        return apiRequest('/user/listings')
+    },
+
+    getUserFavorites: async () => {
+        return apiRequest('/user/favorites')
+    },
+}
+
+export const locationAPI = {
+    getSuggestions: async (query, limit = 10) => {
+        const params = new URLSearchParams({ q: query, limit })
+        return apiRequest(`/locations/suggestions?${params}`)
+    },
+
+    validateLocation: async (locationData) => {
+        return apiRequest('/locations/validate', {
+            method: 'POST',
+            body: JSON.stringify({ location: locationData }),
+        })
+    },
+
+    geocodeAddress: async (address) => {
+        const params = new URLSearchParams({ address })
+        return apiRequest(`/locations/geocode?${params}`)
+    },
+
+    getPopularLocations: async (limit = 20) => {
+        const params = new URLSearchParams({ limit })
+        return apiRequest(`/locations/popular?${params}`)
+    },
+}
+
 export const productAPI = {
     getProducts: async (params = {}) => {
         const queryString = new URLSearchParams(params).toString()
@@ -124,27 +170,6 @@ export const categoryAPI = {
     getCategoryProducts: async (categoryId, params = {}) => {
         const queryString = new URLSearchParams(params).toString()
         return apiRequest(`/categories/${categoryId}/products${queryString ? `?${queryString}` : ''}`)
-    },
-}
-
-export const userAPI = {
-    getProfile: async () => {
-        return apiRequest('/user/profile')
-    },
-
-    updateProfile: async (profileData) => {
-        return apiRequest('/user/profile', {
-            method: 'PUT',
-            body: JSON.stringify(profileData),
-        })
-    },
-
-    getUserListings: async () => {
-        return apiRequest('/user/listings')
-    },
-
-    getUserFavorites: async () => {
-        return apiRequest('/user/favorites')
     },
 }
 
@@ -192,9 +217,10 @@ export { apiRequest }
 
 const api = {
     auth: authAPI,
+    user: userAPI,
+    location: locationAPI,
     products: productAPI,
     categories: categoryAPI,
-    user: userAPI,
     upload: uploadAPI,
     health: healthAPI,
     request: apiRequest,
