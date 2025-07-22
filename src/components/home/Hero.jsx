@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, MapPin, Globe, Calendar, Truck, Sparkles } from 'lucide-react'
+import { Search, MapPin, Globe, Calendar, Truck, Sparkles, ArrowRight, Play } from 'lucide-react'
 
 function Hero() {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('all')
+    const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
 
     const categories = [
         { id: 'all', name: 'All Categories' },
@@ -16,6 +17,41 @@ function Hero() {
         { id: 'services', name: 'Services' }
     ]
 
+    const features = [
+        {
+            icon: MapPin,
+            title: 'Local & Global',
+            desc: 'Shop nearby or worldwide',
+            color: 'from-blue-500 to-cyan-500'
+        },
+        {
+            icon: Calendar,
+            title: 'Book Meetings',
+            desc: 'Schedule with sellers',
+            color: 'from-purple-500 to-pink-500'
+        },
+        {
+            icon: Truck,
+            title: 'Safe Delivery',
+            desc: 'Secure shipping',
+            color: 'from-green-500 to-emerald-500'
+        }
+    ]
+
+    const stats = [
+        { label: 'Active Users', value: '150K+', suffix: '' },
+        { label: 'Products Listed', value: '500K+', suffix: '' },
+        { label: 'Countries Served', value: '25+', suffix: '' }
+    ]
+
+    // Rotate features automatically
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentFeatureIndex((prev) => (prev + 1) % features.length)
+        }, 3000)
+        return () => clearInterval(interval)
+    }, [features.length])
+
     const handleSearch = (e) => {
         e.preventDefault()
         if (searchQuery.trim()) {
@@ -23,141 +59,192 @@ function Hero() {
         }
     }
 
-    const features = [
-        {
-            icon: MapPin,
-            title: 'Local & Global',
-            desc: 'Shop nearby or worldwide'
-        },
-        {
-            icon: Calendar,
-            title: 'Book Meetings',
-            desc: 'Schedule with sellers'
-        },
-        {
-            icon: Truck,
-            title: 'Safe Delivery',
-            desc: 'Secure shipping'
-        }
-    ]
-
     return (
-        <div className="relative gradient-bg text-white overflow-hidden min-h-screen-mobile">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 bg-black/10 dark:bg-black/20" />
+        <div className="relative min-h-screen overflow-hidden">
+            {/* Animated Background */}
+            <div className="absolute inset-0">
+                {/* Base gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900" />
 
-            {/* Animated Background Elements */}
-            <div className="absolute top-10 left-4 w-20 h-20 bg-white/5 rounded-full blur-xl animate-pulse" />
-            <div className="absolute top-32 right-8 w-32 h-32 bg-purple-300/10 rounded-full blur-2xl animate-pulse delay-1000" />
-            <div className="absolute bottom-40 left-8 w-24 h-24 bg-blue-300/10 rounded-full blur-xl animate-pulse delay-500" />
+                {/* Animated orbs */}
+                <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute top-40 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000" />
+                <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl animate-pulse delay-500" />
 
-            <div className="relative container-mobile py-8 md:py-20 flex flex-col justify-center min-h-screen-mobile">
-                <div className="text-center mb-8 md:mb-12">
-                    {/* Mobile Badge */}
-                    <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 mb-4 md:mb-6 border border-white/20">
-                        <Sparkles className="w-4 h-4 text-yellow-300" />
-                        <span className="text-sm font-medium">New marketplace experience</span>
-                    </div>
+                {/* Floating particles */}
+                {[...Array(20)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute w-2 h-2 bg-white/20 rounded-full animate-ping"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 3}s`,
+                            animationDuration: `${2 + Math.random() * 2}s`
+                        }}
+                    />
+                ))}
 
-                    <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-                        Discover, Connect,
-                        <span className="block bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 bg-clip-text text-transparent">
-                            Buy & Sell
-                        </span>
-                    </h1>
-                    <p className="text-lg md:text-xl text-blue-100 dark:text-blue-200 mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed px-4">
-                        Your modern marketplace connecting buyers and sellers locally and globally
-                    </p>
+                {/* Grid overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+            </div>
 
-                    {/* Search Section */}
-                    <div className="max-w-3xl mx-auto mb-6 md:mb-8">
-                        <div className="glass rounded-2xl p-4 md:p-6">
-                            <form onSubmit={handleSearch} className="space-y-3 md:space-y-0 md:flex md:gap-3">
-                                {/* Search Input */}
-                                <div className="flex-1 relative">
-                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="What are you looking for?"
-                                        className="w-full pl-12 pr-4 py-3 md:py-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500 text-base"
-                                    />
+            {/* Content */}
+            <div className="relative z-10">
+                <div className="container-mobile py-20 min-h-screen flex flex-col justify-center">
+                    <div className="text-center mb-12 animate-fade-in">
+                        {/* Badge */}
+                        <div className="inline-flex items-center space-x-2 glass rounded-full px-6 py-3 mb-8 border border-white/20 shadow-2xl">
+                            <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
+                            <span className="text-white font-medium">Welcome to the future of commerce</span>
+                        </div>
+
+                        {/* Main Heading */}
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-8 leading-tight">
+                            <span className="text-white">Discover, Connect,</span>
+                            <br />
+                            <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
+                                Buy & Sell
+                            </span>
+                        </h1>
+
+                        {/* Subtitle */}
+                        <p className="text-xl md:text-2xl text-blue-100 mb-12 max-w-3xl mx-auto leading-relaxed">
+                            Your modern marketplace connecting buyers and sellers{' '}
+                            <span className="text-cyan-400 font-semibold">locally</span> and{' '}
+                            <span className="text-purple-400 font-semibold">globally</span>
+                        </p>
+
+                        {/* Search Section */}
+                        <div className="max-w-4xl mx-auto mb-12">
+                            <form onSubmit={handleSearch} className="glass rounded-3xl p-6 border border-white/20 shadow-2xl backdrop-blur-xl">
+                                <div className="flex flex-col lg:flex-row gap-4">
+                                    {/* Search Input */}
+                                    <div className="flex-1 relative group">
+                                        <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6 z-10 group-focus-within:text-blue-400 transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="What are you looking for today?"
+                                            className="w-full pl-16 pr-6 py-5 text-lg bg-white/10 text-white placeholder-gray-300 rounded-2xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-300"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                                    </div>
+
+                                    {/* Category Selector */}
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="lg:w-48 px-6 py-5 text-lg bg-white/10 text-white rounded-2xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-400 backdrop-blur-sm"
+                                    >
+                                        {categories.map(category => (
+                                            <option key={category.id} value={category.id} className="bg-gray-800">
+                                                {category.name}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {/* Search Button */}
+                                    <button
+                                        type="submit"
+                                        className="lg:w-auto bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-orange-500/25 group"
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <span>Search Now</span>
+                                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    </button>
                                 </div>
-
-                                {/* Category Selector - Mobile: Full width, Desktop: Fixed width */}
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full md:w-48 px-4 py-3 md:py-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500 text-base"
-                                >
-                                    {categories.map(category => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                {/* Search Button */}
-                                <button
-                                    type="submit"
-                                    className="w-full md:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 dark:from-orange-400 dark:to-red-400 dark:hover:from-orange-500 dark:hover:to-red-500 text-white px-6 py-3 md:py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg min-h-[48px] md:min-h-auto"
-                                >
-                                    Search Now
-                                </button>
                             </form>
                         </div>
-                    </div>
 
-                    {/* Features - Mobile: Stack, Desktop: Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto mb-6 md:mb-8">
-                        {features.map((feature, index) => (
-                            <div key={index} className="glass rounded-xl p-4 md:p-6 border border-white/20">
-                                <feature.icon className="w-6 h-6 md:w-8 md:h-8 text-blue-300 dark:text-blue-200 mx-auto mb-2 md:mb-3" />
-                                <h3 className="font-semibold mb-1 text-sm md:text-base">{feature.title}</h3>
-                                <p className="text-blue-100 dark:text-blue-200 text-xs md:text-sm">{feature.desc}</p>
+                        {/* Features Carousel */}
+                        <div className="mb-12">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                                {features.map((feature, index) => {
+                                    const IconComponent = feature.icon
+                                    const isActive = index === currentFeatureIndex
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className={`glass rounded-2xl p-6 border transition-all duration-500 transform ${
+                                                isActive
+                                                    ? 'border-white/40 scale-105 shadow-2xl'
+                                                    : 'border-white/20 scale-100 shadow-xl'
+                                            }`}
+                                        >
+                                            <div className={`w-14 h-14 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg ${isActive ? 'animate-pulse' : ''}`}>
+                                                <IconComponent className="w-8 h-8 text-white" />
+                                            </div>
+                                            <h3 className="text-white font-bold text-lg mb-2">{feature.title}</h3>
+                                            <p className="text-blue-100 text-sm">{feature.desc}</p>
+                                        </div>
+                                    )
+                                })}
                             </div>
-                        ))}
-                    </div>
+                        </div>
 
-                    {/* CTA Buttons - Mobile: Stack, Desktop: Side by side */}
-                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md mx-auto">
-                        <button
-                            onClick={() => navigate('/categories')}
-                            className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold py-3 md:py-4 px-6 md:px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg min-h-[48px]"
-                        >
-                            Start Buying
-                        </button>
-                        <button
-                            onClick={() => navigate('/sell')}
-                            className="bg-transparent border-2 border-white dark:border-gray-300 text-white dark:text-gray-100 hover:bg-white dark:hover:bg-gray-300 hover:text-blue-600 dark:hover:text-gray-900 font-semibold py-3 md:py-4 px-6 md:px-8 rounded-xl transition-all duration-200 min-h-[48px]"
-                        >
-                            Start Selling
-                        </button>
+                        {/* CTA Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                            <button
+                                onClick={() => navigate('/categories')}
+                                className="group bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white hover:text-gray-900 font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-white/25"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <span>Start Exploring</span>
+                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => navigate('/sell')}
+                                className="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-green-500/25"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <span>Start Selling</span>
+                                    <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+                            {stats.map((stat, index) => (
+                                <div key={index} className="text-center group">
+                                    <div className="text-3xl md:text-4xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">
+                                        {stat.value}
+                                    </div>
+                                    <div className="text-blue-200 text-sm md:text-base font-medium">
+                                        {stat.label}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {/* Mobile-only Quick Stats */}
-                <div className="mobile-only mt-8 grid grid-cols-3 gap-4 text-center">
-                    <div className="glass rounded-lg p-3 border border-white/20">
-                        <div className="text-lg font-bold">150K+</div>
-                        <div className="text-xs text-blue-100 dark:text-blue-200">Users</div>
-                    </div>
-                    <div className="glass rounded-lg p-3 border border-white/20">
-                        <div className="text-lg font-bold">500K+</div>
-                        <div className="text-xs text-blue-100 dark:text-blue-200">Products</div>
-                    </div>
-                    <div className="glass rounded-lg p-3 border border-white/20">
-                        <div className="text-lg font-bold">25+</div>
-                        <div className="text-xs text-blue-100 dark:text-blue-200">Countries</div>
+                {/* Scroll Indicator */}
+                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                    <div className="w-6 h-10 border-2 border-white/40 rounded-full flex justify-center">
+                        <div className="w-1 h-3 bg-white/60 rounded-full mt-2 animate-pulse" />
                     </div>
                 </div>
             </div>
 
             {/* Wave Transition */}
             <div className="absolute bottom-0 w-full">
-                <svg className="w-full h-8 md:h-12 text-gray-50 dark:text-gray-900" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                    <path d="M0,120 C150,60 350,0 600,30 C850,60 1050,120 1200,60 L1200,120 Z" fill="currentColor" />
+                <svg
+                    className="w-full h-20 text-gray-50 dark:text-gray-900"
+                    viewBox="0 0 1200 120"
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        d="M0,120 C150,60 350,0 600,30 C850,60 1050,120 1200,60 L1200,120 Z"
+                        fill="currentColor"
+                        className="animate-pulse"
+                    />
                 </svg>
             </div>
         </div>

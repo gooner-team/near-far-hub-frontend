@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     Search, Menu, X, User, Heart, ShoppingBag, MapPin, Globe,
-    LogOut, Crown, Shield, Star, Bell, Settings
+    LogOut, Crown, Shield, Star, Bell, Settings, ChevronDown
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -11,6 +11,7 @@ import ThemeToggle from '../common/ThemeToggle'
 function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isSearchOpen, setIsSearchOpen] = useState(false)
+    const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [isGlobalMode, setIsGlobalMode] = useState(false)
     const navigate = useNavigate()
@@ -28,62 +29,78 @@ function Header() {
     const handleLogout = async () => {
         await logout()
         setIsMenuOpen(false)
+        setIsProfileOpen(false)
         navigate('/')
     }
 
-    const getRoleIcon = (roleName) => {
-        const icons = {
-            admin: <Crown className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />,
-            moderator: <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
-            seller: <Star className="w-4 h-4 text-green-600 dark:text-green-400" />,
-            default: <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+    const getRoleConfig = (roleName) => {
+        const configs = {
+            admin: { icon: Crown, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' },
+            moderator: { icon: Shield, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' },
+            seller: { icon: Star, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' },
+            default: { icon: User, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700' }
         }
-        return icons[roleName] || icons.default
+        return configs[roleName] || configs.default
     }
 
-    const getRoleBadgeColor = (roleName) => {
-        const colors = {
-            admin: 'badge-yellow',
-            moderator: 'badge-blue',
-            seller: 'badge-green',
-            default: 'badge-gray'
-        }
-        return `badge ${colors[roleName] || colors.default}`
-    }
+    const roleConfig = getRoleConfig(user?.role?.name)
 
     return (
         <>
-            <header className="bg-white dark:bg-slate-900 shadow-lg dark:shadow-dark-medium border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 transition-all duration-300">
+            <header className="glass sticky top-0 z-50 border-b border-white/10">
                 {/* Top Bar - Desktop Only */}
-                <div className="bg-gray-900 dark:bg-slate-800 text-white desktop-only">
+                <div className="hidden lg:block border-b border-white/5">
                     <div className="container-modern">
                         <div className="flex justify-between items-center py-2 text-sm">
-                            <div className="flex items-center space-x-3">
-                                <span className="text-gray-300 dark:text-slate-400">Welcome to NearFar Hub</span>
+                            <div className="flex items-center space-x-4">
+                                <span className="text-gray-600 dark:text-gray-300">
+                                    Welcome to NearFar Hub
+                                </span>
                                 <button
                                     onClick={() => setIsGlobalMode(!isGlobalMode)}
-                                    className="flex items-center space-x-1 px-3 py-1 rounded-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                                    className={`
+                                        flex items-center space-x-2 px-3 py-1.5 rounded-full
+                                        transition-all duration-300 transform hover:scale-105
+                                        ${isGlobalMode
+                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }
+                                    `}
                                 >
                                     {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                                    <span>{isGlobalMode ? 'Global' : 'Local'}</span>
+                                    <span className="font-medium">
+                                        {isGlobalMode ? 'Global' : 'Local'}
+                                    </span>
                                 </button>
                             </div>
 
-                            <div className="flex items-center space-x-4">
-                                <Link to="/help" className="hover:text-blue-300 dark:hover:text-blue-400 transition-colors font-medium">
+                            <div className="flex items-center space-x-6">
+                                <Link
+                                    to="/help"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors font-medium"
+                                >
                                     Help
                                 </Link>
-                                <ThemeToggle size="sm" showLabel={false} />
+
+                                <ThemeToggle size="sm" showLabel={false} variant="minimal" />
+
                                 {isAuthenticated && user ? (
                                     <div className="flex items-center space-x-3">
-                                        <span className="text-blue-300 dark:text-blue-400 font-medium">Hi, {user.name}!</span>
-                                        <div className={getRoleBadgeColor(user.role?.name)}>
-                                            {getRoleIcon(user.role?.name)}
-                                            <span className="ml-1">{user.role?.displayName || 'Buyer'}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                            Hi, {user.name}!
+                                        </span>
+                                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${roleConfig.bg} ${roleConfig.border}`}>
+                                            <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                            <span className={roleConfig.color}>
+                                                {user.role?.displayName || 'Buyer'}
+                                            </span>
                                         </div>
                                     </div>
                                 ) : (
-                                    <Link to="/login" className="hover:text-blue-300 dark:hover:text-blue-400 transition-colors font-medium">
+                                    <Link
+                                        to="/login"
+                                        className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors font-medium"
+                                    >
                                         Sign In
                                     </Link>
                                 )}
@@ -93,69 +110,82 @@ function Header() {
                 </div>
 
                 {/* Main Header */}
-                <div className="container-mobile bg-white dark:bg-slate-900 transition-all duration-300">
-                    <div className="flex items-center justify-between h-14 md:h-16">
+                <div className="container-mobile">
+                    <div className="flex items-center justify-between h-16 md:h-18">
                         {/* Logo */}
-                        <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-                            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                <span className="text-white font-bold text-sm md:text-xl">NF</span>
+                        <Link to="/" className="flex items-center space-x-3 group">
+                            <div className="relative">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
+                                    <span className="text-white font-bold text-lg md:text-xl">NF</span>
+                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl blur opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
                             </div>
-                            <span className="text-lg md:text-xl font-bold text-gradient hidden sm:inline">
+                            <span className="text-xl md:text-2xl font-bold text-gradient hidden sm:inline">
                                 NearFar Hub
                             </span>
                         </Link>
 
                         {/* Desktop Search */}
-                        <div className="flex-1 max-w-2xl mx-8 desktop-only">
+                        <div className="flex-1 max-w-2xl mx-8 hidden lg:block">
                             <form onSubmit={handleSearch} className="relative">
-                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-5 h-5" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search products, services..."
-                                    className="input pl-12 pr-20 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-100"
-                                />
-                                <button type="submit" className="absolute right-2 top-1/2 transform -translate-y-1/2 btn-primary py-2">
-                                    Search
-                                </button>
+                                <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                                    <div className="flex items-center">
+                                        <Search className="absolute left-4 w-5 h-5 text-gray-400 z-10" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search products, services..."
+                                            className="w-full pl-12 pr-32 py-4 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                        >
+                                            Search
+                                        </button>
+                                    </div>
+                                </div>
                             </form>
                         </div>
 
                         {/* Navigation Icons */}
-                        <div className="flex items-center space-x-1 md:space-x-2">
+                        <div className="flex items-center space-x-2">
                             {/* Mobile Search Toggle */}
                             <button
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="btn-icon mobile-only text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100"
+                                className="lg:hidden btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 <Search className="w-5 h-5" />
                             </button>
 
                             {/* Theme Toggle - Mobile */}
-                            <div className="mobile-only">
-                                <ThemeToggle showLabel={false} size="sm" />
+                            <div className="lg:hidden">
+                                <ThemeToggle showLabel={false} size="sm" variant="minimal" />
                             </div>
 
                             {/* Notifications */}
                             {isAuthenticated && (
-                                <button className="btn-icon relative text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100">
+                                <button className="btn-icon relative hover:bg-gray-100 dark:hover:bg-gray-800">
                                     <Bell className="w-5 h-5" />
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-2 h-2 md:w-4 md:h-4 flex items-center justify-center md:text-[10px] animate-pulse">
-                                        <span className="hidden md:inline">3</span>
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                                        3
                                     </span>
                                 </button>
                             )}
 
-                            {/* Heart */}
-                            <Link to="/favorites" className="btn-icon desktop-only text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100">
+                            {/* Favorites - Desktop */}
+                            <Link
+                                to="/favorites"
+                                className="hidden lg:flex btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
                                 <Heart className="w-5 h-5" />
                             </Link>
 
                             {/* Cart */}
-                            <Link to="/cart" className="btn-icon relative text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100">
+                            <Link to="/cart" className="btn-icon relative hover:bg-gray-100 dark:hover:bg-gray-800">
                                 <ShoppingBag className="w-5 h-5" />
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center md:w-5 md:h-5 md:text-[10px] font-semibold">
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
                                     2
                                 </span>
                             </Link>
@@ -163,16 +193,75 @@ function Header() {
                             {/* User Actions */}
                             {!isLoading && (
                                 isAuthenticated ? (
-                                    <div className="flex items-center space-x-1 md:space-x-2">
-                                        <Link to="/profile" className="btn-icon desktop-only text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100">
-                                            <User className="w-5 h-5" />
-                                        </Link>
-                                        <button onClick={handleLogout} className="btn-icon text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 desktop-only">
-                                            <LogOut className="w-5 h-5" />
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                            className="hidden lg:flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                                {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-gray-500" />
                                         </button>
+
+                                        {/* Profile Dropdown */}
+                                        {isProfileOpen && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-10"
+                                                    onClick={() => setIsProfileOpen(false)}
+                                                />
+                                                <div className="absolute right-0 mt-2 w-64 glass rounded-2xl border border-white/10 shadow-2xl z-20">
+                                                    <div className="p-4 border-b border-white/10">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                                {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                                                                    {user?.name}
+                                                                </p>
+                                                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${roleConfig.bg} ${roleConfig.border}`}>
+                                                                    <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                                                    <span className={roleConfig.color}>
+                                                                        {user?.role?.displayName || 'Buyer'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-2">
+                                                        <Link
+                                                            to="/profile"
+                                                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+                                                            onClick={() => setIsProfileOpen(false)}
+                                                        >
+                                                            <User className="w-4 h-4" />
+                                                            <span>Profile</span>
+                                                        </Link>
+                                                        <Link
+                                                            to="/settings"
+                                                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+                                                            onClick={() => setIsProfileOpen(false)}
+                                                        >
+                                                            <Settings className="w-4 h-4" />
+                                                            <span>Settings</span>
+                                                        </Link>
+                                                        <button
+                                                            onClick={handleLogout}
+                                                            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                                                        >
+                                                            <LogOut className="w-4 h-4" />
+                                                            <span>Sign Out</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ) : (
-                                    <Link to="/login" className="btn-primary text-sm md:text-base">
+                                    <Link to="/login" className="btn-primary text-sm">
                                         Sign In
                                     </Link>
                                 )
@@ -181,7 +270,7 @@ function Header() {
                             {/* Mobile Menu Toggle */}
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="btn-icon mobile-only text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100"
+                                className="lg:hidden btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                             </button>
@@ -191,149 +280,148 @@ function Header() {
 
                 {/* Mobile Search Bar */}
                 {isSearchOpen && (
-                    <div className="mobile-search border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition-all duration-300">
-                        <form onSubmit={handleSearch} className="relative">
-                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-5 h-5" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search products, services..."
-                                className="input pl-12 pr-20 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-100"
-                                autoFocus
-                            />
-                            <button type="submit" className="absolute right-2 top-1/2 transform -translate-y-1/2 btn-primary py-2 text-sm">
-                                Search
-                            </button>
-                        </form>
+                    <div className="lg:hidden border-t border-white/10 backdrop-blur-xl">
+                        <div className="container-mobile py-4">
+                            <form onSubmit={handleSearch} className="relative">
+                                <div className="glass rounded-2xl border border-white/10">
+                                    <div className="flex items-center">
+                                        <Search className="absolute left-4 w-5 h-5 text-gray-400 z-10" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search products, services..."
+                                            className="w-full pl-12 pr-24 py-4 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium text-sm"
+                                        >
+                                            Go
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
             </header>
 
             {/* Mobile Drawer */}
             {isMenuOpen && (
-                <div className="mobile-drawer">
+                <div className="lg:hidden fixed inset-0 z-50">
                     <div
-                        className="mobile-drawer-backdrop opacity-100"
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
                         onClick={() => setIsMenuOpen(false)}
                     />
-                    <div className="mobile-drawer-content translate-x-0 bg-white dark:bg-slate-900 shadow-2xl">
-                        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-gray-900 dark:text-slate-100">Menu</h3>
+                    <div className="fixed inset-y-0 right-0 w-80 glass border-l border-white/10 shadow-2xl transform transition-transform duration-500">
+                        <div className="flex flex-col h-full">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-white/10">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Menu</h3>
                                 <button
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="btn-icon text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100"
+                                    className="btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                        </div>
 
-                        <div className="p-4 space-y-4 bg-white dark:bg-slate-900">
-                            {/* User Info */}
-                            {isAuthenticated && user && (
-                                <div className="pb-4 border-b border-gray-200 dark:border-slate-700">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                                            {user.name?.charAt(0).toUpperCase() || 'U'}
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-gray-900 dark:text-slate-100">{user.name}</p>
-                                            <div className={getRoleBadgeColor(user.role?.name)}>
-                                                {getRoleIcon(user.role?.name)}
-                                                <span className="ml-1">{user.role?.displayName || 'Buyer'}</span>
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {/* User Info */}
+                                {isAuthenticated && user && (
+                                    <div className="mb-6 p-4 glass rounded-2xl border border-white/10">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                {user.name?.charAt(0).toUpperCase() || 'U'}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900 dark:text-gray-100">{user.name}</p>
+                                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${roleConfig.bg} ${roleConfig.border}`}>
+                                                    <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                                    <span className={roleConfig.color}>
+                                                        {user.role?.displayName || 'Buyer'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Navigation Links */}
-                            <div className="space-y-2">
-                                <Link
-                                    to="/categories"
-                                    className="block px-3 py-3 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-300 font-medium"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Categories
-                                </Link>
-                                <Link
-                                    to="/favorites"
-                                    className="block px-3 py-3 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-300 font-medium"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Favorites
-                                </Link>
-                                <Link
-                                    to="/help"
-                                    className="block px-3 py-3 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-300 font-medium"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Help Center
-                                </Link>
-
-                                {/* Mode Toggle */}
-                                <div className="px-3 py-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-gray-700 dark:text-slate-300 font-medium">Browse Mode</span>
-                                        <button
-                                            onClick={() => setIsGlobalMode(!isGlobalMode)}
-                                            className="flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                                {/* Navigation Links */}
+                                <nav className="space-y-2">
+                                    {[
+                                        { to: "/categories", label: "Categories" },
+                                        { to: "/favorites", label: "Favorites" },
+                                        { to: "/help", label: "Help Center" }
+                                    ].map((link) => (
+                                        <Link
+                                            key={link.to}
+                                            to={link.to}
+                                            className="block px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
+                                            onClick={() => setIsMenuOpen(false)}
                                         >
-                                            {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                                            <span className="text-sm font-medium">{isGlobalMode ? 'Global' : 'Local'}</span>
-                                        </button>
-                                    </div>
-                                </div>
+                                            {link.label}
+                                        </Link>
+                                    ))}
 
-                                {/* Theme Toggle */}
-                                <div className="px-3 py-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-gray-700 dark:text-slate-300 font-medium">Theme</span>
-                                        <ThemeToggle showLabel={true} size="sm" />
+                                    {/* Mode Toggle */}
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">Browse Mode</span>
+                                            <button
+                                                onClick={() => setIsGlobalMode(!isGlobalMode)}
+                                                className={`
+                                                    flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium
+                                                    transition-all duration-300 transform hover:scale-105
+                                                    ${isGlobalMode
+                                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                }
+                                                `}
+                                            >
+                                                {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                                <span>{isGlobalMode ? 'Global' : 'Local'}</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {/* Theme Toggle */}
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">Theme</span>
+                                            <ThemeToggle showLabel={true} size="sm" variant="minimal" />
+                                        </div>
+                                    </div>
+                                </nav>
                             </div>
 
-                            {/* Auth Actions */}
-                            <div className="pt-4 border-t border-gray-200 dark:border-slate-700 space-y-2">
+                            {/* Footer Actions */}
+                            <div className="p-6 border-t border-white/10 space-y-2">
                                 {isAuthenticated ? (
                                     <>
                                         <Link
                                             to="/profile"
-                                            className="block px-3 py-3 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-300 font-medium"
+                                            className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
                                             onClick={() => setIsMenuOpen(false)}
                                         >
-                                            <div className="flex items-center space-x-3">
-                                                <User className="w-5 h-5" />
-                                                <span>Profile</span>
-                                            </div>
-                                        </Link>
-                                        <Link
-                                            to="/settings"
-                                            className="block px-3 py-3 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-300 font-medium"
-                                            onClick={() => setIsMenuOpen(false)}
-                                        >
-                                            <div className="flex items-center space-x-3">
-                                                <Settings className="w-5 h-5" />
-                                                <span>Settings</span>
-                                            </div>
+                                            <User className="w-5 h-5" />
+                                            <span>Profile</span>
                                         </Link>
                                         <button
                                             onClick={handleLogout}
-                                            className="block w-full text-left px-3 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-300 font-medium"
+                                            className="flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium w-full"
                                         >
-                                            <div className="flex items-center space-x-3">
-                                                <LogOut className="w-5 h-5" />
-                                                <span>Sign Out</span>
-                                            </div>
+                                            <LogOut className="w-5 h-5" />
+                                            <span>Sign Out</span>
                                         </button>
                                     </>
                                 ) : (
                                     <Link
                                         to="/login"
-                                        className="block px-3 py-3 btn-primary text-center rounded-lg font-semibold"
+                                        className="btn-primary w-full text-center"
                                         onClick={() => setIsMenuOpen(false)}
                                     >
                                         Sign In
