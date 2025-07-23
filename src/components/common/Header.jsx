@@ -1,288 +1,438 @@
-import {useState} from 'react'
-import {Link, useNavigate} from 'react-router-dom'
-import {Search, Menu, X, User, Heart, ShoppingBag, MapPin, Globe, LogOut, Crown, Shield, Star} from 'lucide-react'
-import {useAuth} from '../../contexts/AuthContext'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+    Search, Menu, X, User, Heart, ShoppingBag, MapPin, Globe,
+    LogOut, Crown, Shield, Star, Bell, Settings, ChevronDown
+} from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
+import ThemeToggle from '../common/ThemeToggle'
 
 function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+    const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [isGlobalMode, setIsGlobalMode] = useState(false)
     const navigate = useNavigate()
-    const {user, isAuthenticated, logout, isLoading} = useAuth()
+    const { user, isAuthenticated, logout, isLoading } = useAuth()
+    const { isDark } = useTheme()
 
     const handleSearch = (e) => {
         e.preventDefault()
         if (searchQuery.trim()) {
             navigate(`/search?q=${encodeURIComponent(searchQuery)}`)
+            setIsSearchOpen(false)
         }
-    }
-
-    const toggleMode = () => {
-        setIsGlobalMode(!isGlobalMode)
     }
 
     const handleLogout = async () => {
         await logout()
         setIsMenuOpen(false)
+        setIsProfileOpen(false)
         navigate('/')
     }
 
-    const handleProfileClick = () => {
-        setIsMenuOpen(false)
-        navigate('/profile')
-    }
-
-    const handleLoginClick = () => {
-        setIsMenuOpen(false)
-        navigate('/login')
-    }
-
-    const handleSellerUpgrade = () => {
-        setIsMenuOpen(false)
-        navigate('/upgrade-to-seller')
-    }
-
-    const getRoleIcon = (roleName) => {
-        switch (roleName) {
-            case 'admin':
-                return <Crown className="w-4 h-4 text-yellow-500" />
-            case 'moderator':
-                return <Shield className="w-4 h-4 text-blue-500" />
-            case 'seller':
-                return <Star className="w-4 h-4 text-green-500" />
-            default:
-                return <User className="w-4 h-4 text-gray-500" />
+    const getRoleConfig = (roleName) => {
+        const configs = {
+            admin: { icon: Crown, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' },
+            moderator: { icon: Shield, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' },
+            seller: { icon: Star, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' },
+            default: { icon: User, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700' }
         }
+        return configs[roleName] || configs.default
     }
 
-    const getRoleBadgeColor = (roleName) => {
-        switch (roleName) {
-            case 'admin':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-            case 'moderator':
-                return 'bg-blue-100 text-blue-800 border-blue-200'
-            case 'seller':
-                return 'bg-green-100 text-green-800 border-green-200'
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-200'
-        }
-    }
+    const roleConfig = getRoleConfig(user?.role?.name)
 
     return (
-        <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
-            {/* Top Bar */}
-            <div className="bg-gray-900 text-white py-2">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center text-sm">
-                        <div className="flex items-center space-x-4">
-                            <span>Welcome to NearFar Hub</span>
-                            <button
-                                onClick={toggleMode}
-                                className="flex items-center space-x-1 px-3 py-1 rounded-full bg-blue-600 hover:bg-blue-700 transition-colors"
-                            >
-                                {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                                <span>{isGlobalMode ? 'Global' : 'Local'}</span>
-                            </button>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <Link to="/help" className="hover:text-blue-300 transition-colors">Help</Link>
-                            {isAuthenticated && user?.permissions?.canSell ? (
-                                <Link to="/sell" className="hover:text-blue-300 transition-colors">Sell</Link>
-                            ) : (
-                                isAuthenticated && user?.permissions?.canUpgradeToSeller && (
-                                    <button
-                                        onClick={handleSellerUpgrade}
-                                        className="hover:text-blue-300 transition-colors"
-                                    >
-                                        Become a Seller
-                                    </button>
-                                )
-                            )}
-                            {isAuthenticated && user && (
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-blue-300">
-                                        Hello, {user.name}!
+        <>
+            <header className="glass sticky top-0 z-50 border-b border-white/10">
+                {/* Top Bar - Desktop Only */}
+                <div className="hidden lg:block border-b border-white/5">
+                    <div className="container-modern">
+                        <div className="flex justify-between items-center py-2 text-sm">
+                            <div className="flex items-center space-x-4">
+                                <span className="text-gray-600 dark:text-gray-300">
+                                    Welcome to NearFar Hub
+                                </span>
+                                <button
+                                    onClick={() => setIsGlobalMode(!isGlobalMode)}
+                                    className={`
+                                        flex items-center space-x-2 px-3 py-1.5 rounded-full
+                                        transition-all duration-300 transform hover:scale-105
+                                        ${isGlobalMode
+                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }
+                                    `}
+                                >
+                                    {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                    <span className="font-medium">
+                                        {isGlobalMode ? 'Global' : 'Local'}
                                     </span>
-                                    <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getRoleBadgeColor(user.role?.name)}`}>
-                                        {getRoleIcon(user.role?.name)}
-                                        <span>{user.role?.displayName || 'Buyer'}</span>
+                                </button>
+                            </div>
+
+                            <div className="flex items-center space-x-6">
+                                <Link
+                                    to="/help"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors font-medium"
+                                >
+                                    Help
+                                </Link>
+
+                                <ThemeToggle size="sm" showLabel={false} variant="minimal" />
+
+                                {isAuthenticated && user ? (
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                            Hi, {user.name}!
+                                        </span>
+                                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${roleConfig.bg} ${roleConfig.border}`}>
+                                            <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                            <span className={roleConfig.color}>
+                                                {user.role?.displayName || 'Buyer'}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                ) : (
+                                    <Link
+                                        to="/login"
+                                        className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors font-medium"
+                                    >
+                                        Sign In
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Main Header */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center space-x-2">
-                        <div
-                            className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                            <span className="text-white font-bold text-xl">NF</span>
-                        </div>
-                        <span
-                            className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            NearFar Hub
-                        </span>
-                    </Link>
-
-                    {/* Search Bar */}
-                    <div className="flex-1 max-w-2xl mx-8">
-                        <form onSubmit={handleSearch} className="relative">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search for products, services, or anything..."
-                                className="w-full px-4 py-3 pl-12 pr-4 text-gray-700 bg-gray-100 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                            <Search
-                                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"/>
-                            <button
-                                type="submit"
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                            >
-                                Search
-                            </button>
-                        </form>
-                    </div>
-
-                    {/* Navigation Icons */}
-                    <div className="flex items-center space-x-4">
-                        <Link to="/favorites" className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
-                            <Heart className="w-6 h-6"/>
-                        </Link>
-                        <Link to="/cart" className="p-2 text-gray-600 hover:text-blue-600 transition-colors relative">
-                            <ShoppingBag className="w-6 h-6"/>
-                            <span
-                                className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                2
+                {/* Main Header */}
+                <div className="container-mobile">
+                    <div className="flex items-center justify-between h-16 md:h-18">
+                        {/* Logo */}
+                        <Link to="/" className="flex items-center space-x-3 group">
+                            <div className="relative">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
+                                    <span className="text-white font-bold text-lg md:text-xl">NF</span>
+                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl blur opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                            </div>
+                            <span className="text-xl md:text-2xl font-bold text-gradient hidden sm:inline">
+                                NearFar Hub
                             </span>
                         </Link>
 
-                        {!isLoading && (
-                            isAuthenticated ? (
-                                <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={handleProfileClick}
-                                        className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                                        title="Profile"
-                                    >
-                                        <User className="w-6 h-6"/>
-                                    </button>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-                                        title="Logout"
-                                    >
-                                        <LogOut className="w-6 h-6"/>
-                                    </button>
+                        {/* Desktop Search */}
+                        <div className="flex-1 max-w-2xl mx-8 hidden lg:block">
+                            <form onSubmit={handleSearch} className="relative">
+                                <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+                                    <div className="flex items-center">
+                                        <Search className="absolute left-4 w-5 h-5 text-gray-400 z-10" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search products, services..."
+                                            className="w-full pl-12 pr-32 py-4 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                        >
+                                            Search
+                                        </button>
+                                    </div>
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={handleLoginClick}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                                >
-                                    Sign In
-                                </button>
-                            )
-                        )}
+                            </form>
+                        </div>
 
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                        >
-                            {isMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}
-                        </button>
+                        {/* Navigation Icons */}
+                        <div className="flex items-center space-x-2">
+                            {/* Mobile Search Toggle */}
+                            <button
+                                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                                className="lg:hidden btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                <Search className="w-5 h-5" />
+                            </button>
+
+                            {/* Theme Toggle - Mobile */}
+                            <div className="lg:hidden">
+                                <ThemeToggle showLabel={false} size="sm" variant="minimal" />
+                            </div>
+
+                            {/* Notifications */}
+                            {isAuthenticated && (
+                                <button className="btn-icon relative hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <Bell className="w-5 h-5" />
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                                        3
+                                    </span>
+                                </button>
+                            )}
+
+                            {/* Favorites - Desktop */}
+                            <Link
+                                to="/favorites"
+                                className="hidden lg:flex btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                <Heart className="w-5 h-5" />
+                            </Link>
+
+                            {/* Cart */}
+                            <Link to="/cart" className="btn-icon relative hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <ShoppingBag className="w-5 h-5" />
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                                    2
+                                </span>
+                            </Link>
+
+                            {/* User Actions */}
+                            {!isLoading && (
+                                isAuthenticated ? (
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                            className="hidden lg:flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                                {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                                        </button>
+
+                                        {/* Profile Dropdown */}
+                                        {isProfileOpen && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-10"
+                                                    onClick={() => setIsProfileOpen(false)}
+                                                />
+                                                <div className="absolute right-0 mt-2 w-64 glass rounded-2xl border border-white/10 shadow-2xl z-20">
+                                                    <div className="p-4 border-b border-white/10">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                                {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                                                                    {user?.name}
+                                                                </p>
+                                                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${roleConfig.bg} ${roleConfig.border}`}>
+                                                                    <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                                                    <span className={roleConfig.color}>
+                                                                        {user?.role?.displayName || 'Buyer'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-2">
+                                                        <Link
+                                                            to="/profile"
+                                                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+                                                            onClick={() => setIsProfileOpen(false)}
+                                                        >
+                                                            <User className="w-4 h-4" />
+                                                            <span>Profile</span>
+                                                        </Link>
+                                                        <Link
+                                                            to="/settings"
+                                                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+                                                            onClick={() => setIsProfileOpen(false)}
+                                                        >
+                                                            <Settings className="w-4 h-4" />
+                                                            <span>Settings</span>
+                                                        </Link>
+                                                        <button
+                                                            onClick={handleLogout}
+                                                            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                                                        >
+                                                            <LogOut className="w-4 h-4" />
+                                                            <span>Sign Out</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <Link to="/login" className="btn-primary text-sm">
+                                        Sign In
+                                    </Link>
+                                )
+                            )}
+
+                            {/* Mobile Menu Toggle */}
+                            <button
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="lg:hidden btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Mobile Menu */}
+                {/* Mobile Search Bar */}
+                {isSearchOpen && (
+                    <div className="lg:hidden border-t border-white/10 backdrop-blur-xl">
+                        <div className="container-mobile py-4">
+                            <form onSubmit={handleSearch} className="relative">
+                                <div className="glass rounded-2xl border border-white/10">
+                                    <div className="flex items-center">
+                                        <Search className="absolute left-4 w-5 h-5 text-gray-400 z-10" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search products, services..."
+                                            className="w-full pl-12 pr-24 py-4 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium text-sm"
+                                        >
+                                            Go
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </header>
+
+            {/* Mobile Drawer */}
             {isMenuOpen && (
-                <div className="md:hidden bg-white border-t border-gray-200">
-                    <div className="px-4 py-2 space-y-2">
-                        <Link
-                            to="/categories"
-                            className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Categories
-                        </Link>
-                        <Link
-                            to="/favorites"
-                            className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Favorites
-                        </Link>
-                        <Link
-                            to="/cart"
-                            className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Cart
-                        </Link>
+                <div className="lg:hidden fixed inset-0 z-50">
+                    <div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+                        onClick={() => setIsMenuOpen(false)}
+                    />
+                    <div className="fixed inset-y-0 right-0 w-80 glass border-l border-white/10 shadow-2xl transform transition-transform duration-500">
+                        <div className="flex flex-col h-full">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-white/10">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Menu</h3>
+                                <button
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="btn-icon hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        {!isLoading && (
-                            isAuthenticated ? (
-                                <>
-                                    <div className="px-3 py-2 text-sm text-gray-500">
-                                        <div className="flex items-center space-x-2">
-                                            <span>Role:</span>
-                                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getRoleBadgeColor(user?.role?.name)}`}>
-                                                {getRoleIcon(user?.role?.name)}
-                                                <span>{user?.role?.displayName || 'Buyer'}</span>
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {/* User Info */}
+                                {isAuthenticated && user && (
+                                    <div className="mb-6 p-4 glass rounded-2xl border border-white/10">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                {user.name?.charAt(0).toUpperCase() || 'U'}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900 dark:text-gray-100">{user.name}</p>
+                                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${roleConfig.bg} ${roleConfig.border}`}>
+                                                    <roleConfig.icon className={`w-3 h-3 mr-1 ${roleConfig.color}`} />
+                                                    <span className={roleConfig.color}>
+                                                        {user.role?.displayName || 'Buyer'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={handleProfileClick}
-                                        className="block w-full text-left px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                    >
-                                        Profile
-                                    </button>
-                                    {user?.permissions?.canUpgradeToSeller && (
-                                        <button
-                                            onClick={handleSellerUpgrade}
-                                            className="block w-full text-left px-3 py-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                                        >
-                                            Upgrade to Seller
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleLogout}
-                                        className="block w-full text-left px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                    >
-                                        Logout
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={handleLoginClick}
-                                    className="block w-full text-center px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-                                >
-                                    Sign In
-                                </button>
-                            )
-                        )}
+                                )}
 
-                        {isAuthenticated && user?.permissions?.canSell && (
-                            <Link
-                                to="/sell"
-                                className="block px-3 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-center"
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                Start Selling
-                            </Link>
-                        )}
+                                {/* Navigation Links */}
+                                <nav className="space-y-2">
+                                    {[
+                                        { to: "/categories", label: "Categories" },
+                                        { to: "/favorites", label: "Favorites" },
+                                        { to: "/help", label: "Help Center" }
+                                    ].map((link) => (
+                                        <Link
+                                            key={link.to}
+                                            to={link.to}
+                                            className="block px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    ))}
+
+                                    {/* Mode Toggle */}
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">Browse Mode</span>
+                                            <button
+                                                onClick={() => setIsGlobalMode(!isGlobalMode)}
+                                                className={`
+                                                    flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium
+                                                    transition-all duration-300 transform hover:scale-105
+                                                    ${isGlobalMode
+                                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                }
+                                                `}
+                                            >
+                                                {isGlobalMode ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                                <span>{isGlobalMode ? 'Global' : 'Local'}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Theme Toggle */}
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">Theme</span>
+                                            <ThemeToggle showLabel={true} size="sm" variant="minimal" />
+                                        </div>
+                                    </div>
+                                </nav>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-6 border-t border-white/10 space-y-2">
+                                {isAuthenticated ? (
+                                    <>
+                                        <Link
+                                            to="/profile"
+                                            className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            <User className="w-5 h-5" />
+                                            <span>Profile</span>
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium w-full"
+                                        >
+                                            <LogOut className="w-5 h-5" />
+                                            <span>Sign Out</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <Link
+                                        to="/login"
+                                        className="btn-primary w-full text-center"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        Sign In
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
-        </header>
+        </>
     )
 }
 

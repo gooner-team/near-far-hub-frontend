@@ -2,10 +2,29 @@ import { Link } from 'react-router-dom'
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react'
 
 function Footer() {
+    const quickLinks = [
+        { to: '/categories', label: 'Browse Categories' },
+        { to: '/sell', label: 'Start Selling' },
+        { to: '/help', label: 'Help Center' },
+        { to: '/safety', label: 'Safety Tips' }
+    ]
+
+    const supportLinks = [
+        { to: '/terms', label: 'Terms of Service' },
+        { to: '/privacy', label: 'Privacy Policy' },
+        { to: '/contact', label: 'Contact Us' },
+        { to: '/about', label: 'About Us' }
+    ]
+
+    const socialLinks = [
+        { href: '#', icon: Facebook, label: 'Facebook' },
+        { href: '#', icon: Twitter, label: 'Twitter' },
+        { href: '#', icon: Instagram, label: 'Instagram' }
+    ]
+
     return (
         <footer className="bg-gray-900 text-white">
-            {/* Main Footer */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="container-modern py-12">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {/* Company Info */}
                     <div className="space-y-4">
@@ -17,18 +36,18 @@ function Footer() {
                         </div>
                         <p className="text-gray-300 text-sm leading-relaxed">
                             Your modern marketplace for buying and selling locally and globally.
-                            Connect with sellers, book appointments, and discover amazing products.
                         </p>
                         <div className="flex space-x-4">
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                <Facebook className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                <Twitter className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                <Instagram className="w-5 h-5" />
-                            </a>
+                            {socialLinks.map((social, index) => (
+                                <a
+                                    key={index}
+                                    href={social.href}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                    aria-label={social.label}
+                                >
+                                    <social.icon className="w-5 h-5" />
+                                </a>
+                            ))}
                         </div>
                     </div>
 
@@ -36,31 +55,16 @@ function Footer() {
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Quick Links</h3>
                         <ul className="space-y-2">
-                            <li>
-                                <Link to="/categories" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Browse Categories
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/sell" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Start Selling
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/appointments" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    My Appointments
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/orders" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Order History
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/favorites" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Saved Items
-                                </Link>
-                            </li>
+                            {quickLinks.map((link, index) => (
+                                <li key={index}>
+                                    <Link
+                                        to={link.to}
+                                        className="text-gray-300 hover:text-white transition-colors text-sm"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
@@ -68,35 +72,20 @@ function Footer() {
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Support</h3>
                         <ul className="space-y-2">
-                            <li>
-                                <Link to="/help" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Help Center
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/safety" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Safety Tips
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/terms" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Terms of Service
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/privacy" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Privacy Policy
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/contact" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    Contact Us
-                                </Link>
-                            </li>
+                            {supportLinks.map((link, index) => (
+                                <li key={index}>
+                                    <Link
+                                        to={link.to}
+                                        className="text-gray-300 hover:text-white transition-colors text-sm"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
-                    {/* Contact Info */}
+                    {/* Contact & Newsletter */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Contact</h3>
                         <div className="space-y-3">
@@ -114,7 +103,7 @@ function Footer() {
                             </div>
                         </div>
 
-                        {/* Newsletter Signup */}
+                        {/* Newsletter */}
                         <div className="mt-6">
                             <h4 className="text-sm font-semibold mb-2">Stay Updated</h4>
                             <div className="flex space-x-2">
@@ -134,7 +123,7 @@ function Footer() {
 
             {/* Bottom Bar */}
             <div className="border-t border-gray-800">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="container-modern py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center">
                         <p className="text-gray-400 text-sm">
                             © 2025 NearFar Hub. All rights reserved.
